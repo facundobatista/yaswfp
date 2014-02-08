@@ -1,0 +1,14 @@
+#!/bin/bash
+#
+# Copyright 2014 Facundo Batista
+
+set -eu
+
+if [ $# -ne 0 ]; then
+    TARGET="$@"
+else
+    TARGET="."
+fi
+
+nosetests3 $TARGET
+flake8 $TARGET

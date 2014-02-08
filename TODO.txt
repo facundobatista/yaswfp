@@ -1,5 +1,0 @@
-- make it comply the two examples we have
-- transform parser to be a library that can be used programatically (and
-  that will be used by a parser to show the same we have now)
-- put tests in a proper directories layout
-- add some static code checking

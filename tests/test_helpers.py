@@ -1,9 +1,26 @@
+# Copyright 2014 Facundo Batista
+#
+# This program is free software: you can redistribute it and/or modify it
+# under the terms of the GNU General Public License version 3, as published
+# by the Free Software Foundation.
+#
+# This program is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranties of
+# MERCHANTABILITY, SATISFACTORY QUALITY, or FITNESS FOR A PARTICULAR
+# PURPOSE.  See the GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License along
+# with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+# For further info, check  http://github.com/facundobatista/yaswfp
+
+"""Test cases for some helpers."""
 
 import io
 import unittest
 
+from helpers import BitConsumer, unpack_ui8, unpack_ui32
 
-from parser import BitConsumer
 
 class BitConsumerTestCase(unittest.TestCase):
 
@@ -54,3 +71,15 @@ class BitConsumerTestCase(unittest.TestCase):
     def test_no_bits(self):
         bc = BitConsumer(io.BytesIO(b"\x01"))
         self.assertEqual(bc.get(0), None)  # get 0!!
+
+
+class BitPacksTestCase(unittest.TestCase):
+    """Check the structs unpacker."""
+
+    def test_ui8(self):
+        src = io.BytesIO(b'\x08')
+        assert unpack_ui8(src) == 0x08
+
+    def test_ui32(self):
+        src = io.BytesIO(b'\x98\x19\x02\x00')
+        assert unpack_ui32(src) == 137624
