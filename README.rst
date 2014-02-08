@@ -43,7 +43,7 @@ directly or the handy ``parsefile`` function::
     65536
 
 
-How to deal with still-unknonw-objects
+How to deal with still-unknown-objects
 --------------------------------------
 
 Not all the spec is covered (this is a work in progress!).
@@ -71,7 +71,7 @@ You'll need ``python3-flake8`` and ``python3-nose``. Of course, this is
 Python 3.
 
 To complete some methods or be able to parse new structures, we should add
-examples that show that new stuff, see current "sanity" tests. Yes, unittests
+examples that show that new stuff, see current "sanity" tests. Yes, unit tests
 are desirable, feel free to add those too.
 
 

@@ -33,7 +33,6 @@ is found.
 import io
 import math
 import struct
-import sys
 import zlib
 
 from helpers import (
