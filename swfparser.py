@@ -576,7 +576,6 @@ class SWFParser:
     def _get_struct_rect(self):
         """Get the RECT structure."""
         firstbyte = unpack_ui8(self._src)
-        print("========= FRUTA", firstbyte)
         nbits = firstbyte >> 3
         rest_len = math.ceil((5 + 4 * nbits) / 8) - 1  # already read first
         rest_bytes = self._src.read(rest_len)
@@ -803,12 +802,23 @@ def parsefile(filename):
 
 
 if __name__ == '__main__':
-    if len(sys.argv) != 2:
-        print("Usage: swfparser.py file.swf")
-        exit()
+    import argparse
 
-    swf = parsefile(sys.argv[1])
+    parser = argparse.ArgumentParser(
+        description='Parse a SWF file and show all its internals')
+    parser.add_argument('filepath', help='the SWF file to parse')
+    parser.add_argument('-t', '--show-tags', action='store_true',
+                        help='show the first level tags of the file')
+    parser.add_argument('-e', '--extended', action='store_true',
+                        help='show all objects with full detail and nested')
+    args = parser.parse_args()
+    print(args)
+
+    swf = parsefile(args.filepath)
     print(swf.header)
     print("(has {} tags)".format(len(swf.tags)))
-    for tag in swf.tags:
-        print(tag)
+
+    if args.show_tags or args.extended:
+        f = repr if args.extended else str
+        for tag in swf.tags:
+            print(f(tag))
