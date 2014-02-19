@@ -31,13 +31,10 @@ is found.
 # ¡Py3!
 
 import io
-import math
-import struct
 import zlib
 
 from helpers import (
     BitConsumer,
-    grouper,
     unpack_si16,
     unpack_ui16,
     unpack_ui32,
@@ -227,6 +224,8 @@ def _str(obj):
     """Show nicely the generic object received."""
     values = []
     for k, v in sorted(obj.__dict__.items()):
+        if isinstance(v, str):
+            v = repr(v)
         v = str(v) if len(str(v)) < 10 else "(...)"
         values.append((k, v))
     values = ", ".join("{}={}".format(k, v) for k, v in values)
@@ -370,12 +369,12 @@ class SWFParser:
             records.append(record)
 
             bc = BitConsumer(self._src)
-            record.TextRecordType = bc.get(1)
-            record.StyleFlagsReserved = bc.get(3)
-            record.StyleFlagsHasFont = bc.get(1)
-            record.StyleFlagsHasColor = bc.get(1)
-            record.StyleFlagsHasYOffset = bc.get(1)
-            record.StyleFlagsHasXOffset = bc.get(1)
+            record.TextRecordType = bc.u_get(1)
+            record.StyleFlagsReserved = bc.u_get(3)
+            record.StyleFlagsHasFont = bc.u_get(1)
+            record.StyleFlagsHasColor = bc.u_get(1)
+            record.StyleFlagsHasYOffset = bc.u_get(1)
+            record.StyleFlagsHasXOffset = bc.u_get(1)
 
             if record.StyleFlagsHasFont:
                 record.FontID = unpack_ui16(self._src)
@@ -394,8 +393,8 @@ class SWFParser:
             for _ in range(record.GlyphCount):
                 glyph = _make_object("GlyphEntry")
                 glyphs.append(glyph)
-                glyph.GlyphIndex = bc.get(glyph_bits)
-                glyph.GlyphAdvance = bc.get(advance_bits)
+                glyph.GlyphIndex = bc.u_get(glyph_bits)
+                glyph.GlyphAdvance = bc.u_get(advance_bits)
         return obj
 
     def _handle_tag_defineedittext(self):
@@ -405,22 +404,22 @@ class SWFParser:
         obj.Bounds = self._get_struct_rect()
 
         bc = BitConsumer(self._src)
-        obj.HasText = bc.get(1)
-        obj.WordWrap = bc.get(1)
-        obj.Multiline = bc.get(1)
-        obj.Password = bc.get(1)
-        obj.ReadOnly = bc.get(1)
-        obj.HasTextColor = bc.get(1)
-        obj.HasMaxLength = bc.get(1)
-        obj.HasFont = bc.get(1)
-        obj.HasFontClass = bc.get(1)
-        obj.AutoSize = bc.get(1)
-        obj.HasLayout = bc.get(1)
-        obj.NoSelect = bc.get(1)
-        obj.Border = bc.get(1)
-        obj.WasStatic = bc.get(1)
-        obj.HTML = bc.get(1)
-        obj.UseOutlines = bc.get(1)
+        obj.HasText = bc.u_get(1)
+        obj.WordWrap = bc.u_get(1)
+        obj.Multiline = bc.u_get(1)
+        obj.Password = bc.u_get(1)
+        obj.ReadOnly = bc.u_get(1)
+        obj.HasTextColor = bc.u_get(1)
+        obj.HasMaxLength = bc.u_get(1)
+        obj.HasFont = bc.u_get(1)
+        obj.HasFontClass = bc.u_get(1)
+        obj.AutoSize = bc.u_get(1)
+        obj.HasLayout = bc.u_get(1)
+        obj.NoSelect = bc.u_get(1)
+        obj.Border = bc.u_get(1)
+        obj.WasStatic = bc.u_get(1)
+        obj.HTML = bc.u_get(1)
+        obj.UseOutlines = bc.u_get(1)
 
         if obj.HasFont:
             obj.FontID = unpack_ui16(self._src)
@@ -449,14 +448,14 @@ class SWFParser:
         obj = _make_object("PlaceObject2")
 
         bc = BitConsumer(self._src)
-        obj.PlaceFlagHasClipActions = bc.get(1)
-        obj.PlaceFlagHasClipDepth = bc.get(1)
-        obj.PlaceFlagHasName = bc.get(1)
-        obj.PlaceFlagHasRatio = bc.get(1)
-        obj.PlaceFlagHasColorTransform = bc.get(1)
-        obj.PlaceFlagHasMatrix = bc.get(1)
-        obj.PlaceFlagHasCharacter = bc.get(1)
-        obj.PlaceFlagMove = bc.get(1)
+        obj.PlaceFlagHasClipActions = bc.u_get(1)
+        obj.PlaceFlagHasClipDepth = bc.u_get(1)
+        obj.PlaceFlagHasName = bc.u_get(1)
+        obj.PlaceFlagHasRatio = bc.u_get(1)
+        obj.PlaceFlagHasColorTransform = bc.u_get(1)
+        obj.PlaceFlagHasMatrix = bc.u_get(1)
+        obj.PlaceFlagHasCharacter = bc.u_get(1)
+        obj.PlaceFlagMove = bc.u_get(1)
 
         obj.Depth = unpack_ui16(self._src)
 
@@ -482,14 +481,14 @@ class SWFParser:
         obj.FontID = unpack_ui16(self._src)
 
         bc = BitConsumer(self._src)
-        obj.FontFlagsHasLayout = bc.get(1)
-        obj.FontFlagsShiftJIS = bc.get(1)
-        obj.FontFlagsSmallText = bc.get(1)
-        obj.FontFlagsANSI = bc.get(1)
-        obj.FontFlagsWideOffsets = bc.get(1)
-        obj.FontFlagsWideCodes = bc.get(1)
-        obj.FontFlagsItalic = bc.get(1)
-        obj.FontFlagsBold = bc.get(1)
+        obj.FontFlagsHasLayout = bc.u_get(1)
+        obj.FontFlagsShiftJIS = bc.u_get(1)
+        obj.FontFlagsSmallText = bc.u_get(1)
+        obj.FontFlagsANSI = bc.u_get(1)
+        obj.FontFlagsWideOffsets = bc.u_get(1)
+        obj.FontFlagsWideCodes = bc.u_get(1)
+        obj.FontFlagsItalic = bc.u_get(1)
+        obj.FontFlagsBold = bc.u_get(1)
 
         obj.LanguageCode = self._get_struct_langcode()
         obj.FontNameLen = unpack_ui8(self._src)
@@ -572,17 +571,109 @@ class SWFParser:
             actions.append(action)
         return obj
 
+    def _handle_tag_fileattributes(self):
+        """Handle the FileAttributes tag."""
+        obj = _make_object("FileAttributes")
+        bc = BitConsumer(self._src)
+
+        bc.u_get(1)  # reserved
+        obj.UseDirectBlit = bc.u_get(1)
+        obj.UseGPU = bc.u_get(1)
+        obj.HasMetadata = bc.u_get(1)
+        obj.ActionScript3 = bc.u_get(1)
+        bc.u_get(2)  # reserved
+        obj.UseNetwork = bc.u_get(1)
+        bc.u_get(24)  # reserved
+        return obj
+
+    def _handle_tag_metadata(self):
+        """Handle the Metadata tag."""
+        obj = _make_object("Metadata")
+        obj.Metadata = self._get_struct_string()
+        return obj
+
+    def _handle_tag_setbackgroundcolor(self):
+        """Handle the SetBackgroundColor tag."""
+        obj = _make_object("SetBackgroundColor")
+        obj.BackgroundColor = self._get_struct_rgb()
+        return obj
+
+    def _handle_tag_definesceneandframelabeldata(self):
+        """Handle the DefineSceneAndFrameLabelData tag."""
+        obj = _make_object("DefineSceneAndFrameLabelData")
+        obj.SceneCount = self._get_struct_encodedu32()
+        for i in range(1, obj.SceneCount + 1):
+            setattr(obj, 'Offset{}'.format(i), self._get_struct_encodedu32())
+            setattr(obj, 'Name{}'.format(i), self._get_struct_string())
+        obj.FrameLabelCount = self._get_struct_encodedu32()
+        for i in range(1, obj.FrameLabelCount + 1):
+            setattr(obj, 'FrameNum{}'.format(i), self._get_struct_encodedu32())
+            setattr(obj, 'FrameLabel{}'.format(i), self._get_struct_string())
+        return obj
+
+    def _handle_tag_defineshape4(self):
+        """Handle the DefineShape4 tag."""
+        obj = _make_object("DefineShape4")
+        obj.ShapeId = unpack_ui16(self._src)
+        obj.ShapeBounds = self._get_struct_rect()
+        obj.EdgeBounds = self._get_struct_rect()
+
+        bc = BitConsumer(self._src)
+        bc.u_get(5)  # reserved
+        obj.UsesFillWindingRule = bc.u_get(1)
+        obj.UsesNonScalingStrokes = bc.u_get(1)
+        obj.UsesScalingStrokes = bc.u_get(1)
+        obj.Shapes = self._get_struct_shapewithstyle(4)
+        return obj
+
+    def _handle_tag_definemorphshape2(self):
+        """Handle the DefineMorphShape2 tag."""
+        obj = _make_object("DefineMorphShape2")
+        obj.CharacterId = unpack_ui16(self._src)
+        obj.StartBounds = self._get_struct_rect()
+        obj.EndBounds = self._get_struct_rect()
+        obj.StartEdgeBounds = self._get_struct_rect()
+        obj.EndEdgeBounds = self._get_struct_rect()
+
+        bc = BitConsumer(self._src)
+        bc.u_get(6)  # reserved
+        obj.UsesNonScalingStrokes = bc.u_get(1)
+        obj.UsesScalingStrokes = bc.u_get(1)
+
+        obj.Offset = unpack_ui32(self._src)
+
+        # FIXME: this tag needs more work; I'm skipping some attributes here
+        self._src.read(obj.Offset)
+
+        obj.EndEdges = self._get_struct_shape()
+        return obj
+
+    def _handle_tag_showframe(self):
+        """Handle the ShowFrame tag."""
+        return _make_object("ShowFrame")
+
+    def _handle_tag_removeobject(self):
+        """Handle the RemoveObject tag."""
+        obj = _make_object("RemoveObject")
+        obj.CharacterId = unpack_ui16(self._src)
+        obj.Depth = unpack_ui16(self._src)
+        return obj
+
+    def _handle_tag_removeobject2(self):
+        """Handle the RemoveObject2 tag."""
+        obj = _make_object("RemoveObject2")
+        obj.Depth = unpack_ui16(self._src)
+        return obj
+
     def _get_struct_rect(self):
         """Get the RECT structure."""
-        firstbyte = unpack_ui8(self._src)
-        nbits = firstbyte >> 3
-        rest_len = math.ceil((5 + 4 * nbits) / 8) - 1  # already read first
-        rest_bytes = self._src.read(rest_len)
-        rest_ints = struct.unpack("<%dB" % (rest_len,), rest_bytes)
-        allbins = (bin(firstbyte)[-3:] +
-                   ''.join((bin(i)[2:]).zfill(8) for i in rest_ints))
-        groups = list(grouper(nbits, allbins))
-        return tuple(int(''.join(x), 2) for x in groups[:4])
+        bc = BitConsumer(self._src)
+        nbits = bc.u_get(5)
+        return tuple(bc.u_get(nbits) for _ in range(4))
+
+    def _get_struct_rgb(self):
+        """Get the RGB structure."""
+        return [unpack_ui8(self._src) for _ in range(3)]
 
     def _get_struct_rgba(self):
         """Get the RGBA structure."""
@@ -651,23 +742,23 @@ class SWFParser:
         bc = BitConsumer(self._src)
 
         # scale
-        obj.HasScale = bc.get(1)
+        obj.HasScale = bc.u_get(1)
         if obj.HasScale:
-            obj.NScaleBits = n_scale_bits = bc.get(5)
-            obj.ScaleX = bc.get(n_scale_bits)
-            obj.ScaleY = bc.get(n_scale_bits)
+            obj.NScaleBits = n_scale_bits = bc.u_get(5)
+            obj.ScaleX = bc.u_get(n_scale_bits)
+            obj.ScaleY = bc.u_get(n_scale_bits)
 
         # rotate
-        obj.HasRotate = bc.get(1)
+        obj.HasRotate = bc.u_get(1)
         if obj.HasRotate:
-            obj.NRotateBits = n_rotate_bits = bc.get(5)
-            obj.RotateSkew0 = bc.get(n_rotate_bits)
-            obj.RotateSkew1 = bc.get(n_rotate_bits)
+            obj.NRotateBits = n_rotate_bits = bc.u_get(5)
+            obj.RotateSkew0 = bc.u_get(n_rotate_bits)
+            obj.RotateSkew1 = bc.u_get(n_rotate_bits)
 
         # translate
-        obj.NTranslateBits = n_translate_bits = bc.get(5)
-        obj.TranslateX = bc.get(n_translate_bits)
-        obj.TranslateY = bc.get(n_translate_bits)
+        obj.NTranslateBits = n_translate_bits = bc.u_get(5)
+        obj.TranslateX = bc.u_get(n_translate_bits)
+        obj.TranslateY = bc.u_get(n_translate_bits)
         return obj
 
     def _get_struct_cxformwithalpha(self):
@@ -675,69 +766,67 @@ class SWFParser:
         obj = _make_object("CXformWithAlpha")
         bc = BitConsumer(self._src)
 
-        obj.HasAddTerms = bc.get(1)
-        obj.HasMultTerms = bc.get(1)
-        obj.NBits = nbits = bc.get(4)
+        obj.HasAddTerms = bc.u_get(1)
+        obj.HasMultTerms = bc.u_get(1)
+        obj.NBits = nbits = bc.u_get(4)
 
         if obj.HasMultTerms:
-            obj.RedMultTerm = bc.get(nbits)
-            obj.GreenMultTerm = bc.get(nbits)
-            obj.BlueMultTerm = bc.get(nbits)
-            obj.AlphaMultTerm = bc.get(nbits)
+            obj.RedMultTerm = bc.u_get(nbits)
+            obj.GreenMultTerm = bc.u_get(nbits)
+            obj.BlueMultTerm = bc.u_get(nbits)
+            obj.AlphaMultTerm = bc.u_get(nbits)
 
         if obj.HasAddTerms:
-            obj.RedAddTerm = bc.get(nbits)
-            obj.GreenAddTerm = bc.get(nbits)
-            obj.BlueAddTerm = bc.get(nbits)
-            obj.AlphaAddTerm = bc.get(nbits)
+            obj.RedAddTerm = bc.u_get(nbits)
+            obj.GreenAddTerm = bc.u_get(nbits)
+            obj.BlueAddTerm = bc.u_get(nbits)
+            obj.AlphaAddTerm = bc.u_get(nbits)
 
         return obj
 
-    def _get_struct_shape(self):
-        """Get the values for the SHAPE record."""
-        obj = _make_object("Shape")
+    def _get_shaperecords(self, num_fill_bits,
+                          num_line_bits, shape_number):
+        """Return an array of SHAPERECORDS."""
+        shape_records = []
         bc = BitConsumer(self._src)
-        obj.NumFillBits = num_fill_bits = bc.get(4)
-        obj.NumLineBits = num_line_bits = bc.get(4)
-        obj.ShapeRecords = shape_records = []
 
         while True:
-            type_flag = bc.get(1)
+            type_flag = bc.u_get(1)
             if type_flag:
                 # edge record
-                straight_flag = bc.get(1)
-                num_bits = bc.get(4)
+                straight_flag = bc.u_get(1)
+                num_bits = bc.u_get(4)
                 if straight_flag:
                     record = _make_object('StraightEdgeRecord')
                     record.TypeFlag = 1
                     record.StraightFlag = 1
                     record.NumBits = num_bits
-                    record.GeneralLineFlag = general_line_flag = bc.get(1)
+                    record.GeneralLineFlag = general_line_flag = bc.u_get(1)
                     if general_line_flag:
-                        record.DeltaX = bc.get(num_bits + 2)
-                        record.DeltaY = bc.get(num_bits + 2)
+                        record.DeltaX = bc.u_get(num_bits + 2)
+                        record.DeltaY = bc.u_get(num_bits + 2)
                     else:
-                        record.VertLineFlag = vert_line_flag = bc.get(1)
+                        record.VertLineFlag = vert_line_flag = bc.u_get(1)
                         if vert_line_flag:
-                            record.DeltaY = bc.get(num_bits + 2)
+                            record.DeltaY = bc.u_get(num_bits + 2)
                         else:
-                            record.DeltaX = bc.get(num_bits + 2)
+                            record.DeltaX = bc.u_get(num_bits + 2)
                 else:
                     record = _make_object('CurvedEdgeRecord')
                     record.TypeFlag = 1
                     record.StraightFlag = 0
                     record.NumBits = num_bits
-                    record.ControlDeltaX = bc.get(num_bits + 2)
-                    record.ControlDeltaY = bc.get(num_bits + 2)
-                    record.AnchorDeltaX = bc.get(num_bits + 2)
-                    record.AnchorDeltaY = bc.get(num_bits + 2)
+                    record.ControlDeltaX = bc.u_get(num_bits + 2)
+                    record.ControlDeltaY = bc.u_get(num_bits + 2)
+                    record.AnchorDeltaX = bc.u_get(num_bits + 2)
+                    record.AnchorDeltaY = bc.u_get(num_bits + 2)
 
             else:
                 # non edge record
                 record = _make_object('StyleChangeRecord')
                 record.TypeFlag = 0
 
-                five_bits = [bc.get(1) for _ in range(5)]
+                five_bits = [bc.u_get(1) for _ in range(5)]
                 if not any(five_bits):
                     # the five bits are zero, this is an EndShapeRecord
                     break
@@ -748,38 +837,193 @@ class SWFParser:
                     record.StateMoveTo) = five_bits
 
                 if record.StateMoveTo:
-                    record.MoveBits = move_bits = bc.get(5)
-                    record.MoveDeltaX = bc.get(move_bits)
-                    record.MoveDeltaY = bc.get(move_bits)
+                    record.MoveBits = move_bits = bc.u_get(5)
+                    record.MoveDeltaX = bc.s_get(move_bits)
+                    record.MoveDeltaY = bc.s_get(move_bits)
                 if record.StateFillStyle0:
-                    record.FillStyle0 = bc.get(num_fill_bits)
+                    record.FillStyle0 = bc.u_get(num_fill_bits)
                 if record.StateFillStyle1:
-                    record.FillStyle1 = bc.get(num_fill_bits)
+                    record.FillStyle1 = bc.u_get(num_fill_bits)
                 if record.StateLineStyle:
-                    record.LineStyle = bc.get(num_line_bits)
+                    record.LineStyle = bc.u_get(num_line_bits)
 
                 if record.StateNewStyles:
-                    record.FillStyles = self._get_struct_fillstylearray()
-                    record.LineStyles = self._get_struct_linestylearray()
-                    record.NumFillBits = bc.get(4)
-                    record.NumLineBits = bc.get(4)
+                    record.FillStyles = self._get_struct_fillstylearray(
+                        shape_number)
+                    record.LineStyles = self._get_struct_linestylearray(
+                        shape_number)
+                    # these two not only belong to the record, but also
+                    # modifies the number of bits read in the future
+                    record.NumFillBits = num_fill_bits = bc.u_get(4)
+                    record.NumLineBits = num_line_bits = bc.u_get(4)
+
+                    # reset the BC here, as the structures just read work at
+                    # byte level
+                    bc = BitConsumer(self._src)
 
             shape_records.append(record)
+        return shape_records
+
+    def _get_struct_shape(self):
+        """Get the values for the SHAPE record."""
+        obj = _make_object("Shape")
+        bc = BitConsumer(self._src)
+        obj.NumFillBits = n_fill_bits = bc.u_get(4)
+        obj.NumLineBits = n_line_bits = bc.u_get(4)
+        obj.ShapeRecords = self._get_shaperecords(
+            n_fill_bits, n_line_bits, 0)
         return obj
 
-    def _get_struct_fillstylearray(self):
-        """Get the values for the FILLSTYLEARRAY record."""
-        if self.unknown_alert:
-            raise ValueError("Unknown object: FillStyleArray.")
-        _dict = {'__str__': _repr, '__repr__': _repr, 'name': "FillStyleArray"}
-        return type("UnknownObject", (), _dict)()
+    def _get_struct_fillstyle(self, shape_number):
+        """Get the values for the FILLSTYLE record."""
+        obj = _make_object("FillStyle")
+        obj.FillStyleType = style_type = unpack_ui8(self._src)
 
-    def _get_struct_linestylearray(self):
+        if style_type == 0x00:
+            if shape_number <= 2:
+                obj.Color = self._get_struct_rgb()
+            else:
+                obj.Color = self._get_struct_rgba()
+
+        if style_type in (0x10, 0x12, 0x13):
+            obj.GradientMatrix = self._get_struct_matrix()
+
+        if style_type in (0x10, 0x12):
+            obj.Gradient = self._get_struct_gradient(shape_number)
+        if style_type == 0x13:
+            obj.Gradient = self._get_struct_focalgradient(shape_number)
+
+        if style_type in (0x40, 0x41, 0x42, 0x43):
+            obj.BitmapId = unpack_ui16(self._src)
+            obj.BitmapMatrix = self._get_struct_matrix()
+        return obj
+
+    def _get_struct_fillstylearray(self, shape_number):
+        """Get the values for the FILLSTYLEARRAY record."""
+        obj = _make_object("FillStyleArray")
+        obj.FillStyleCount = count = unpack_ui8(self._src)
+        if count == 0xFF:
+            obj.FillStyleCountExtended = count = unpack_ui16(self._src)
+        obj.FillStyles = [self._get_struct_fillstyle(shape_number)
+                          for _ in range(count)]
+        return obj
+
+    def _get_struct_linestylearray(self, shape_number):
         """Get the values for the LINESTYLEARRAY record."""
-        if self.unknown_alert:
-            raise ValueError("Unknown object: LineStyleArray.")
-        _dict = {'__str__': _repr, '__repr__': _repr, 'name': "LineStyleArray"}
-        return type("UnknownObject", (), _dict)()
+        obj = _make_object("LineStyleArray")
+        obj.LineStyleCount = count = unpack_ui8(self._src)
+        if count == 0xFF:
+            obj.LineStyleCountExtended = count = unpack_ui16(self._src)
+        obj.LineStyles = line_styles = []
+
+        for _ in range(count):
+            if shape_number <= 3:
+                record = _make_object("LineStyle")
+                record.Width = unpack_ui16(self._src)
+                if shape_number <= 2:
+                    record.Color = self._get_struct_rgb()
+                else:
+                    record.Color = self._get_struct_rgba()
+            else:
+                record = _make_object("LineStyle2")
+                record.Width = unpack_ui16(self._src)
+
+                bc = BitConsumer(self._src)
+                record.StartCapStyle = bc.u_get(2)
+                record.JoinStyle = bc.u_get(2)
+                record.HasFillFlag = bc.u_get(1)
+                record.NoHScaleFlag = bc.u_get(1)
+                record.NoVScaleFlag = bc.u_get(1)
+                record.PixelHintingFlag = bc.u_get(1)
+
+                bc.u_get(5)  # reserved
+                record.NoClose = bc.u_get(1)
+                record.EndCapStyle = bc.u_get(2)
+
+                if record.JoinStyle == 2:
+                    record.MiterLimitFactor = unpack_ui16(self._src)
+                if record.HasFillFlag == 0:
+                    record.Color = self._get_struct_rgba()
+                else:
+                    record.Color = self._get_struct_fillstyle(shape_number)
+
+            line_styles.append(record)
+
+        return obj
+
+    def _get_struct_encodedu32(self):
+        """Get a EncodedU32 number."""
+        useful = []
+        while True:
+            byte = ord(self._src.read(1))
+            useful.append(byte)
+            if byte < 127:
+                # got all the useful bytes
+                break
+
+        # transform into bits reordering the bytes
+        useful = ['00000000' + bin(b)[2:] for b in useful[::-1]]
+
+        # get the top 7 (*seven*, as the eight one is the flag) and convert
+        return int(''.join([b[-7:] for b in useful]), 2)
+
+    def _get_struct_shapewithstyle(self, shape_number):
+        """Get the values for the SHAPEWITHSTYLE record."""
+        obj = _make_object("ShapeWithStyle")
+        obj.FillStyles = self._get_struct_fillstylearray(shape_number)
+        obj.FillStyles = self._get_struct_linestylearray(shape_number)
+        bc = BitConsumer(self._src)
+        obj.NumFillBits = n_fill_bits = bc.u_get(4)
+        obj.NumlineBits = n_line_bits = bc.u_get(4)
+        obj.ShapeRecords = self._get_shaperecords(
+            n_fill_bits, n_line_bits, shape_number)
+        return obj
+
+    def _get_struct_gradient(self, shape_number):
+        """Get the values for the GRADIENT record."""
+        obj = _make_object("Gradient")
+        bc = BitConsumer(self._src)
+        obj.SpreadMode = bc.u_get(2)
+        obj.InterpolationMode = bc.u_get(2)
+        obj.NumGradients = bc.u_get(4)
+        obj.GradientRecords = gradient_records = []
+
+        for _ in range(obj.NumGradients):
+            record = _make_object("GradRecord")
+            gradient_records.append(record)
+            record.Ratio = unpack_ui8(self._src)
+            if shape_number <= 2:
+                record.Color = self._get_struct_rgb()
+            else:
+                record.Color = self._get_struct_rgba()
+        return obj
+
+    def _get_struct_focalgradient(self, shape_number):
+        """Get the values for the FOCALGRADIENT record."""
+        obj = _make_object("FocalGradient")
+        bc = BitConsumer(self._src)
+        obj.SpreadMode = bc.u_get(2)
+        obj.InterpolationMode = bc.u_get(2)
+        obj.NumGradients = bc.u_get(4)
+        obj.GradientRecords = gradient_records = []
+
+        for _ in range(obj.NumGradients):
+            record = _make_object("GradRecord")
+            gradient_records.append(record)
+            record.Ratio = unpack_ui8(self._src)
+            if shape_number <= 2:
+                record.Color = self._get_struct_rgb()
+            else:
+                record.Color = self._get_struct_rgba()
+
+        obj.FocalPoint = self._get_struct_fixed8()
+        return obj
+
+    def _get_struct_fixed8(self):
+        """Get a FIXED8 value."""
+        dec_part = unpack_ui8(self._src)
+        int_part = unpack_ui8(self._src)
+        return int_part + dec_part / 256
 
     def _handle_actionconstantpool(self):
         """Handle the ActionConstantPool action."""

@@ -38,3 +38,22 @@ class StructsTestCase(unittest.TestCase):
     def test_rect_long(self, _a, _b):
         parser = SWFParser(io.BytesIO(b'\x70\x00\x0a\x8c\x00\x00\xda\xc0'))
         self.assertEqual(parser._get_struct_rect(), (0, 5400, 0, 7000))
+
+    @patch.object(SWFParser, '_get_header')
+    @patch.object(SWFParser, '_process_tags')
+    def test_encodedu32_simple(self, _a, _b):
+        parser = SWFParser(io.BytesIO(b'\x3a'))
+        self.assertEqual(parser._get_struct_encodedu32(), 58)
+
+    @patch.object(SWFParser, '_get_header')
+    @patch.object(SWFParser, '_process_tags')
+    def test_encodedu32_several(self, _a, _b):
+        parser = SWFParser(io.BytesIO(b'\x8c\xac\x29'))
+        # compose: 0101001 0101100 0001100
+        self.assertEqual(parser._get_struct_encodedu32(), 677388)
+
+    @patch.object(SWFParser, '_get_header')
+    @patch.object(SWFParser, '_process_tags')
+    def test_fixed8(self, _a, _b):
+        parser = SWFParser(io.BytesIO(b'\x80\x07'))
+        self.assertEqual(parser._get_struct_fixed8(), 7.5)

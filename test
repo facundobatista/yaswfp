@@ -10,5 +10,5 @@ else
     TARGET="."
 fi
 
-nosetests3 $TARGET
+nosetests3 -v -s $TARGET
 flake8 $TARGET

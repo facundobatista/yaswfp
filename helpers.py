@@ -57,8 +57,8 @@ class BitConsumer:
         self._bits = None
         self._count = 0
 
-    def get(self, quant):
-        """Return a number composed with the given quantity of bits."""
+    def u_get(self, quant):
+        """Return a number using the given quantity of unsigned bits."""
         if not quant:
             return
         bits = []
@@ -76,3 +76,16 @@ class BitConsumer:
             bits.append(read)
         data = int("".join(bits), 2)
         return data
+
+    def s_get(self, quant):
+        """Return a number using the given quantity of signed bits."""
+        sign = self.u_get(1)
+        raw_number = self.u_get(quant - 1)
+        if sign == 0:
+            # positive, simplest case
+            number = raw_number
+        else:
+            # negative, complemento a 2
+            complement = 2 ** (quant - 1) - 1
+            number = -1 * ((raw_number ^ complement) + 1)
+        return number
