@@ -42,6 +42,9 @@ directly or the handy ``parsefile`` function::
     >>> obj.Matrix.ScaleX
     65536
 
+This follows the `SWF File Format Specification Version 19`_, but it is
+not (yet) 100% covered, so you may find some *unknown objects*.
+
 
 How to deal with still-unknown-objects
 --------------------------------------
@@ -82,3 +85,6 @@ Any doubt, any question, any suggestion, or whatever, feel free to open
 an issue here or find me in IRC, I'm ``facundobatista`` in Freenode.
 
 Thanks!
+
+
+.. _SWF File Format Specification Version 19: http://wwwimages.adobe.com/www.adobe.com/content/dam/Adobe/en/devnet/swf/pdf/swf-file-format-spec.pdf

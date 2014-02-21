@@ -17,8 +17,8 @@
 """Parse a SWF file and expose all its internals.
 
 This follows the SWF FILE FORMAT SPECIFICATION VERSION 19 which is not
-included in this project for your easier finding because Adobe people is
-mean and forbid the spec distribution.
+included in this project for your easier finding because Adobe forbids
+the spec distribution.
 
 The attributes names are CamelCase to match as close as possible the
 spec.
