@@ -33,7 +33,7 @@ is found.
 import io
 import zlib
 
-from helpers import (
+from yaswfp.helpers import (
     BitConsumer,
     unpack_si16,
     unpack_ui16,

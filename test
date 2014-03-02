@@ -12,3 +12,4 @@ fi
 
 nosetests3 -v -s $TARGET
 flake8 $TARGET
+rm -rf __pycache__

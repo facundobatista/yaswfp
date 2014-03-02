@@ -19,7 +19,7 @@
 import io
 import unittest
 
-from helpers import BitConsumer, unpack_ui8, unpack_ui32
+from yaswfp.helpers import BitConsumer, unpack_ui8, unpack_ui32
 
 
 class BitConsumerTestCase(unittest.TestCase):
