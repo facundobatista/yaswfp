@@ -21,7 +21,7 @@ import unittest
 
 from unittest.mock import patch
 
-from swfparser import SWFParser
+from yaswfp.swfparser import SWFParser
 
 
 class StructsTestCase(unittest.TestCase):

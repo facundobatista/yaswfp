@@ -19,7 +19,7 @@
 import os
 import unittest
 
-from swfparser import SWFParser, parsefile
+from yaswfp.swfparser import SWFParser, parsefile
 
 BASEDIR = os.path.join(os.path.dirname(__file__), 'samples')
 
