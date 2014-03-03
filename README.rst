@@ -63,6 +63,25 @@ do it if you offer a real stream of bytes as an example or even
 a sample SWF file with the still missing object inside.
 
 
+Checking coverage
+-----------------
+
+There is an easy way of checking how many of the objects (tags, actions,
+structures, etc) are properly covered by the parser: just use the
+``coverage`` parameter::
+
+    $ python3 yaswfp/swfparser.py -c yaswfp/tests/samples/1252533834.swf
+    Header(Signature='CWS', ...)
+    Tags count: 55
+    Coverage is 97.3% of 74 total items
+    Most common parsed objects:
+       22 PlaceObject2
+       21 ShowFrame
+       10 LineStyleArray
+    Most common Unknown objects
+        2 DefineMorphShape2
+
+
 Development
 -----------
 

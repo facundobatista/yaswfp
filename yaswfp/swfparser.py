@@ -30,6 +30,7 @@ is found.
 
 # ¡Py3!
 
+import collections
 import io
 import zlib
 
@@ -225,19 +226,20 @@ ACTION_NAMES = {
 def _str(obj):
     """Show nicely the generic object received."""
     values = []
-    for k, v in sorted(obj.__dict__.items()):
-        if isinstance(v, str):
-            v = repr(v)
-        v = str(v) if len(str(v)) < 10 else "(...)"
-        values.append((k, v))
+    for name in obj._attribs:
+        val = getattr(obj, name)
+        if isinstance(val, str):
+            val = repr(val)
+        val = str(val) if len(str(val)) < 10 else "(...)"
+        values.append((name, val))
     values = ", ".join("{}={}".format(k, v) for k, v in values)
     return "{}({})".format(obj.__class__.__name__, values)
 
 
 def _repr(obj):
     """Show the received object as precise as possible."""
-    vals = ", ".join("{}={!r}".format(k, v)
-                     for k, v in sorted(obj.__dict__.items()))
+    vals = ", ".join("{}={!r}".format(name, getattr(obj, name))
+                                      for name in obj._attribs)
     if vals:
         t = "{}(name={}, {})".format(obj.__class__.__name__, obj.name, vals)
     else:
@@ -245,9 +247,22 @@ def _repr(obj):
     return t
 
 
+class SWFObject:
+    """A super class for all the objects created here."""
+
+    def __init__(self):
+        self._attribs = []
+
+    def __setattr__(self, name, value):
+        if name != "_attribs":
+            self._attribs.append(name)
+        super(SWFObject, self).__setattr__(name, value)
+
+
 def _make_object(name):
     """Create a generic object for the tags."""
-    klass = type(name, (), {'__str__': _str, '__repr__': _repr, 'name': name})
+    klass = type(name, (SWFObject,),
+                 {'__str__': _str, '__repr__': _repr, 'name': name})
     return klass()
 
 
@@ -317,7 +332,7 @@ class SWFParser:
 
                 tag_payload = self._src.read(tag_len)
                 _dict = {'__str__': _repr, '__repr__': _repr, 'name': tag_name}
-                tag = type("UnknownObject", (), _dict)()
+                tag = type("UnknownObject", (SWFObject,), _dict)()
                 tag.raw_payload = tag_payload
             else:
                 prev_pos = self._src.tell()
@@ -555,7 +570,7 @@ class SWFParser:
                     action_payload = self._src.read(action_len)
                     _dict = {'__str__': _repr, '__repr__': _repr,
                              'name': action_name}
-                    action = type("UnknownAction", (), _dict)()
+                    action = type("UnknownAction", (SWFObject,), _dict)()
                     action.raw_payload = action_payload
                 else:
                     prev_pos = self._src.tell()
@@ -1037,6 +1052,43 @@ class SWFParser:
         return obj
 
 
+def _coverage(tags):
+    """Calculate the coverage of a file."""
+    items_unk = collections.Counter()
+    items_ok = collections.Counter()
+
+    def _go_deep(obj):
+        """Recursive function to find internal attributes."""
+        if type(obj).__name__ in ('UnknownObject', 'UnknownAction'):
+            # blatantly unknown
+            items_unk[obj.name] += 1
+        elif obj.name in ('DefineMorphShape2', 'ClipActions'):
+            # these are incomplete, see FIXMEs in the code above
+            items_unk[obj.name] += 1
+        else:
+            # fully parsed
+            items_ok[obj.name] += 1
+
+        for name in obj._attribs:
+            attr = getattr(obj, name)
+            if isinstance(attr, SWFObject):
+                _go_deep(attr)
+
+    for tag in tags:
+        _go_deep(tag)
+
+    full_count = sum(items_ok.values()) + sum(items_unk.values())
+    coverage = 100 * sum(items_ok.values()) / full_count
+    print("Coverage is {:.1f}% of {} total items".format(coverage, full_count))
+    print("Most common parsed objects:")
+    for k, v in items_ok.most_common(3):
+        print("{:5d} {}".format(v, k))
+    if items_unk:
+        print("Most common Unknown objects")
+        for k, v in items_unk.most_common(3):
+            print("{:5d} {}".format(v, k))
+
+
 def parsefile(filename):
     """Parse a SWF.
 
@@ -1056,12 +1108,16 @@ if __name__ == '__main__':
                         help='show the first level tags of the file')
     parser.add_argument('-e', '--extended', action='store_true',
                         help='show all objects with full detail and nested')
+    parser.add_argument('-c', '--coverage', action='store_true',
+                        help='indicate a percentage of coverage of given file')
     args = parser.parse_args()
-    print(args)
 
     swf = parsefile(args.filepath)
     print(swf.header)
-    print("(has {} tags)".format(len(swf.tags)))
+    print("Tags count:", len(swf.tags))
+
+    if args.coverage:
+        _coverage(swf.tags)
 
     if args.show_tags or args.extended:
         f = repr if args.extended else str
