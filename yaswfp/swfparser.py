@@ -42,7 +42,7 @@ from yaswfp.helpers import (
     unpack_ui8,
 )
 
-VERSION = 0.1
+VERSION = 0.2
 
 # name of each tag (as a dict, not a list, for easier human consumption)
 TAG_NAMES = {
