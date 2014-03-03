@@ -96,12 +96,16 @@ To complete some methods or be able to parse new structures, we should add
 examples that show that new stuff, see current "sanity" tests. Yes, unit tests
 are desirable, feel free to add those too.
 
+The project is hosted in GitHub::
+
+  https://github.com/facundobatista/yaswfp
+
 
 Contact
 -------
 
 Any doubt, any question, any suggestion, or whatever, feel free to open
-an issue here or find me in IRC, I'm ``facundobatista`` in Freenode.
+an issue in GitHub or find me in IRC, I'm ``facundobatista`` in Freenode.
 
 Thanks!
 
