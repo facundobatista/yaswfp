@@ -11,7 +11,7 @@ else
 fi
 
 # Detect python version to setup the right commands to run
-PYTHON_VERSION=`python -c 'import sys; print(sys.version_info.major)'`
+PYTHON_VERSION=`python -c 'import sys; print(sys.version_info[0])'`
 if [ $PYTHON_VERSION == "2\n" ]; then
     NOSE="nosetests3"
 else
