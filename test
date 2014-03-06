@@ -21,6 +21,11 @@ fi
 # Show the commands that are run
 set -x
 
+flake8 --exit-zero $TARGET
+
 $NOSE -v -s $TARGET
-flake8 $TARGET
+NOSE_EXIT_CODE=$?
+
 rm -rf __pycache__
+
+exit $NOSE_EXIT_CODE
