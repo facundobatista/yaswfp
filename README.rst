@@ -3,6 +3,8 @@ yaswfp
 
 Yet Another SWF Parser.
 
+.. image:: https://travis-ci.org/andresriancho/yaswfp.png?branch=master   :target: https://travis-ci.org/andresriancho/yaswfp
+
 You can pronounce whatever you like :)
 
 
