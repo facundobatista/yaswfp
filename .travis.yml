@@ -7,6 +7,6 @@ python:
 # command to install dependencies
 install:
   - "pip install ."
-  - "pip install flake8 nosetests"
+  - "pip install flake8 nose"
 # command to run tests
 script: test
