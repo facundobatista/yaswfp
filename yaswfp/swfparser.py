@@ -249,7 +249,7 @@ def _repr(obj):
     return t
 
 
-class SWFObject:
+class SWFObject(object):
     """A super class for all the objects created here."""
 
     def __init__(self):
