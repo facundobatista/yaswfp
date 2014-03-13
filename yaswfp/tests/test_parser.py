@@ -19,7 +19,12 @@
 import io
 import unittest
 
-from unittest.mock import patch
+# py3k + 2.7 compatibility
+try:
+    from unittest.mock import patch
+except ImportError:
+    # we're in python 2.7
+    from mock import patch
 
 from yaswfp.swfparser import SWFParser
 
