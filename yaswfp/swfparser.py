@@ -1,4 +1,3 @@
-# coding=utf-8
 #
 # Copyright 2013-2014 Facundo Batista
 #
@@ -30,7 +29,7 @@ in the SWFParser to change the behaviour when an still-not-done object
 is found.
 """
 
-# ¡Py3!
+from __future__ import division
 
 import collections
 import io
