@@ -31,13 +31,6 @@ def _get_attribs(tag):
 
 class SanityTestCase(unittest.TestCase):
 
-    def test_wivet1_issue_2(self):
-        """
-        :see: https://github.com/facundobatista/yaswfp/issues/2
-        """
-        SWFParser.unknown_alert = False
-        swf = parsefile(os.path.join(BASEDIR, 'wivet1.swf'))
-
     def test_1252533834(self):
         SWFParser.unknown_alert = True
         swf = parsefile(os.path.join(BASEDIR, '1252533834.swf'))
