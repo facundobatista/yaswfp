@@ -238,8 +238,8 @@ def _str(obj):
 
 def _repr(obj):
     """Show the received object as precise as possible."""
-    vals = ", ".join("{}={!r}".format(name, getattr(obj, name))
-                                      for name in obj._attribs)
+    vals = ", ".join("{}={!r}".format(
+        name, getattr(obj, name)) for name in obj._attribs)
     if vals:
         t = "{}(name={}, {})".format(obj.__class__.__name__, obj.name, vals)
     else:
@@ -322,7 +322,21 @@ class SWFParser:
             if tag_len == 0x3f:
                 # the length is the next four bytes!
                 tag_len = unpack_ui32(self._src)
-            tag_name = TAG_NAMES[tag_type]
+
+            try:
+                tag_name = TAG_NAMES[tag_type]
+            except KeyError:
+                # malformed SWF, create and unknown object with malformed tag
+                tag_payload = self._src.read(tag_len)
+                _dict = {
+                    '__str__': _repr,
+                    '__repr__': _repr,
+                    'name': 'UnspecifiedObject(tag={!r})'.format(tag_type),
+                }
+                tag = type("UnknownObject", (SWFObject,), _dict)()
+                tag.raw_payload = tag_payload
+                tags.append(tag)
+                continue
 
             try:
                 tag_meth = getattr(self, "_handle_tag_" + tag_name.lower())
@@ -334,15 +348,18 @@ class SWFParser:
                 _dict = {'__str__': _repr, '__repr__': _repr, 'name': tag_name}
                 tag = type("UnknownObject", (SWFObject,), _dict)()
                 tag.raw_payload = tag_payload
-            else:
-                prev_pos = self._src.tell()
-                tag = tag_meth()
-                assert tag is not None, tag_name
-                quant_read = self._src.tell() - prev_pos
-                if quant_read != tag_len:
-                    raise RuntimeError("Bad bytes consumption by tag {!r} "
-                                       "handler (did {}, should {})".format(
-                                       tag_name, quant_read, tag_len))
+                tags.append(tag)
+                continue
+
+            # we know the tag type, and have the handler, let's process it
+            prev_pos = self._src.tell()
+            tag = tag_meth()
+            assert tag is not None, tag_name
+            quant_read = self._src.tell() - prev_pos
+            if quant_read != tag_len:
+                raise RuntimeError("Bad bytes consumption by tag {!r} "
+                                   "handler (did {}, should {})".format(
+                                   tag_name, quant_read, tag_len))
             tags.append(tag)
         return tags
 

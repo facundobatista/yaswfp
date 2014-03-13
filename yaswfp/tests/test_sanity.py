@@ -16,8 +16,11 @@
 
 """Some sanity checks."""
 
+import itertools
 import os
 import unittest
+
+from unittest import mock
 
 from yaswfp.swfparser import SWFParser, parsefile
 
@@ -32,8 +35,8 @@ def _get_attribs(tag):
 class SanityTestCase(unittest.TestCase):
 
     def test_1252533834(self):
-        SWFParser.unknown_alert = True
-        swf = parsefile(os.path.join(BASEDIR, '1252533834.swf'))
+        with mock.patch.object(SWFParser, 'unknown_alert', True):
+            swf = parsefile(os.path.join(BASEDIR, '1252533834.swf'))
 
         # header
         h = swf.header
@@ -374,3 +377,24 @@ class SanityTestCase(unittest.TestCase):
         t = swf.tags[54]
         self.assertEqual(t.name, 'ShowFrame')
         self.assertEqual(_get_attribs(t), set())
+
+    def test_malformed_swf(self):
+        # it should support a non-existant tag
+        swf = parsefile(os.path.join(BASEDIR, 'wivet1.swf'))
+
+        # header
+        should_tags = [
+            'FileAttributes',
+            'Metadata',
+            'EnableDebugger2',
+            'UnspecifiedObject(tag=63)',
+            'ScriptLimits',
+            'SetBackgroundColor',
+            'UnspecifiedObject(tag=41)',
+            'FrameLabel',
+            'DoABC',
+            'SymbolClass',
+            'ShowFrame',
+        ]
+        for tag_name, real_tag in itertools.zip_longest(should_tags, swf.tags):
+            self.assertEqual(real_tag.name, tag_name)
