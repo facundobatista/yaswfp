@@ -398,3 +398,78 @@ class SanityTestCase(unittest.TestCase):
         ]
         for tag_name, real_tag in itertools.zip_longest(should_tags, swf.tags):
             self.assertEqual(real_tag.name, tag_name)
+
+    def test_subscribe(self):
+        SWFParser.unknown_alert = True
+        swf = parsefile(os.path.join(BASEDIR, 'subscribe.swf'))
+        self.assertEqual(len(swf.tags), 16)
+
+        t = swf.tags[1]
+        self.assertEqual(t.name, 'DefineShape')
+        self.assertEqual(_get_attribs(t), {'ShapeId', 'ShapeBounds', 'Shapes'})
+        self.assertEqual(t.Shapes.FillStyles.FillStyleCount, 1)
+        self.assertEqual(t.Shapes.LineStyles.LineStyleCount, 0)
+
+        t = swf.tags[2]
+        self.assertEqual(t.name, 'DefineFont2')
+        self.assertEqual(_get_attribs(t), {
+            'FontID', 'FontFlagsHasLayout', 'FontFlagsShiftJIS',
+            'FontFlagsSmallText', 'FontFlagsANSI', 'FontFlagsWideOffsets',
+            'FontFlagsWideCodes', 'FontFlagsItalic', 'FontFlagsBold',
+            'LanguageCode', 'FontNameLen', 'FontName', 'NumGlyphs',
+            'OffsetTable', 'CodeTableOffset', 'GlyphShapeTable', 'CodeTable'})
+
+        t = swf.tags[3]
+        self.assertEqual(t.name, 'DefineText')
+        self.assertEqual(_get_attribs(t), {
+            'CharacterID', 'TextBounds', 'TextMatrix', 'GlyphBits',
+            'AdvanceBits', 'TextRecords', 'EndOfRecordsFlag'})
+        self.assertEqual(len(t.TextRecords), 2)
+
+        t = swf.tags[4]
+        self.assertEqual(t.name, 'DefineShape')
+        self.assertEqual(_get_attribs(t), {'ShapeId', 'ShapeBounds', 'Shapes'})
+        self.assertEqual(t.Shapes.FillStyles.FillStyleCount, 1)
+        self.assertEqual(t.Shapes.LineStyles.LineStyleCount, 1)
+
+        t = swf.tags[5]
+        self.assertEqual(t.name, 'DefineShape')
+        self.assertEqual(_get_attribs(t), {'ShapeId', 'ShapeBounds', 'Shapes'})
+        self.assertEqual(t.Shapes.FillStyles.FillStyleCount, 1)
+        self.assertEqual(t.Shapes.LineStyles.LineStyleCount, 1)
+
+        t = swf.tags[6]
+        self.assertEqual(t.name, 'DefineShape')
+        self.assertEqual(_get_attribs(t), {'ShapeId', 'ShapeBounds', 'Shapes'})
+        self.assertEqual(t.Shapes.FillStyles.FillStyleCount, 1)
+        self.assertEqual(t.Shapes.LineStyles.LineStyleCount, 0)
+
+        t = swf.tags[7]
+        self.assertEqual(t.name, 'DefineShape')
+        self.assertEqual(_get_attribs(t), {'ShapeId', 'ShapeBounds', 'Shapes'})
+        self.assertEqual(t.Shapes.FillStyles.FillStyleCount, 1)
+        self.assertEqual(t.Shapes.LineStyles.LineStyleCount, 1)
+
+        t = swf.tags[8]
+        self.assertEqual(t.name, 'DefineShape')
+        self.assertEqual(_get_attribs(t), {'ShapeId', 'ShapeBounds', 'Shapes'})
+        self.assertEqual(t.Shapes.FillStyles.FillStyleCount, 1)
+        self.assertEqual(t.Shapes.LineStyles.LineStyleCount, 1)
+
+        t = swf.tags[9]
+        self.assertEqual(t.name, 'DefineShape')
+        self.assertEqual(_get_attribs(t), {'ShapeId', 'ShapeBounds', 'Shapes'})
+        self.assertEqual(t.Shapes.FillStyles.FillStyleCount, 1)
+        self.assertEqual(t.Shapes.LineStyles.LineStyleCount, 1)
+
+        t = swf.tags[10]
+        self.assertEqual(t.name, 'DefineShape')
+        self.assertEqual(_get_attribs(t), {'ShapeId', 'ShapeBounds', 'Shapes'})
+        self.assertEqual(t.Shapes.FillStyles.FillStyleCount, 1)
+        self.assertEqual(t.Shapes.LineStyles.LineStyleCount, 1)
+
+        t = swf.tags[11]
+        self.assertEqual(t.name, 'DefineShape2')
+        self.assertEqual(_get_attribs(t), {'ShapeId', 'ShapeBounds', 'Shapes'})
+        self.assertEqual(t.Shapes.FillStyles.FillStyleCount, 1)
+        self.assertEqual(t.Shapes.LineStyles.LineStyleCount, 0)

@@ -34,7 +34,7 @@ import collections
 import io
 import zlib
 
-from yaswfp.helpers import (
+from helpers import (
     BitConsumer,
     unpack_si16,
     unpack_ui16,
@@ -255,7 +255,8 @@ class SWFObject:
 
     def __setattr__(self, name, value):
         if name != "_attribs":
-            self._attribs.append(name)
+            if name not in self._attribs:
+                self._attribs.append(name)
         super(SWFObject, self).__setattr__(name, value)
 
 
@@ -379,9 +380,8 @@ class SWFParser:
         obj.JPEGData = b"".join(allbytes)
         return obj
 
-    def _handle_tag_definetext2(self):
-        """Handle the DefineText2 tag."""
-        obj = _make_object("DefineText2")
+    def _generic_definetext_parser(self, obj, rgb_struct):
+        """Generic parser for the DefineTextN tags."""
         obj.CharacterID = unpack_ui16(self._src)
         obj.TextBounds = self._get_struct_rect()
         obj.TextMatrix = self._get_struct_matrix()
@@ -397,7 +397,7 @@ class SWFParser:
                 obj.EndOfRecordsFlag = 0
                 break
 
-            # we have a TEXTRECORD, let's go back the 8 bytes and set the obj
+            # we have a TEXTRECORD, let's go back the 8 bits and set the obj
             self._src.seek(-1, io.SEEK_CUR)
             record = _make_object("TextRecord")
             records.append(record)
@@ -413,7 +413,7 @@ class SWFParser:
             if record.StyleFlagsHasFont:
                 record.FontID = unpack_ui16(self._src)
             if record.StyleFlagsHasColor:
-                record.TextColor = self._get_struct_rgba()
+                record.TextColor = rgb_struct()
             if record.StyleFlagsHasXOffset:
                 record.XOffset = unpack_si16(self._src)
             if record.StyleFlagsHasYOffset:
@@ -429,6 +429,17 @@ class SWFParser:
                 glyphs.append(glyph)
                 glyph.GlyphIndex = bc.u_get(glyph_bits)
                 glyph.GlyphAdvance = bc.u_get(advance_bits)
+
+    def _handle_tag_definetext(self):
+        """Handle the DefineText tag."""
+        obj = _make_object("DefineText")
+        self._generic_definetext_parser(obj, self._get_struct_rgb)
+        return obj
+
+    def _handle_tag_definetext2(self):
+        """Handle the DefineText2 tag."""
+        obj = _make_object("DefineText2")
+        self._generic_definetext_parser(obj, self._get_struct_rgba)
         return obj
 
     def _handle_tag_defineedittext(self):
@@ -509,50 +520,6 @@ class SWFParser:
             obj.ClipActions = self._get_struct_clipactions()
         return obj
 
-    def _handle_tag_definefont3(self):
-        """Handle the DefineFont3 tag."""
-        obj = _make_object("DefineFont3")
-        obj.FontID = unpack_ui16(self._src)
-
-        bc = BitConsumer(self._src)
-        obj.FontFlagsHasLayout = bc.u_get(1)
-        obj.FontFlagsShiftJIS = bc.u_get(1)
-        obj.FontFlagsSmallText = bc.u_get(1)
-        obj.FontFlagsANSI = bc.u_get(1)
-        obj.FontFlagsWideOffsets = bc.u_get(1)
-        obj.FontFlagsWideCodes = bc.u_get(1)
-        obj.FontFlagsItalic = bc.u_get(1)
-        obj.FontFlagsBold = bc.u_get(1)
-
-        obj.LanguageCode = self._get_struct_langcode()
-        obj.FontNameLen = unpack_ui8(self._src)
-        obj.FontName = "".join(chr(unpack_ui8(self._src))
-                               for i in range(obj.FontNameLen))
-        if obj.FontName[-1] == '\x00':  # most probably ends in null, clean it
-            obj.FontName = obj.FontName[:-1]
-
-        num_glyphs = unpack_ui16(self._src)
-        getter_wide = unpack_ui32 if obj.FontFlagsWideOffsets else unpack_ui16
-        obj.OffsetTable = [getter_wide(self._src) for _ in range(num_glyphs)]
-        obj.CodeTableOffset = getter_wide(self._src)
-        obj.GlyphShapeTable = [self._get_struct_shape()
-                               for _ in range(num_glyphs)]
-        obj.CodeTable = [unpack_ui16(self._src) for _ in range(num_glyphs)]
-
-        if obj.FontFlagsHasLayout:
-            obj.FontAscent = unpack_ui16(self._src)
-            obj.FontDecent = unpack_ui16(self._src)
-            obj.FontLeading = unpack_ui16(self._src)
-            obj.FontAdvanceTable = [unpack_si16(self._src)
-                                    for _ in range(num_glyphs)]
-            obj.FontBoundsTable = [self._get_struct_rect()
-                                   for _ in range(num_glyphs)]
-            obj.KerningCount = unpack_ui16(self._src)
-            obj.FontKerningTable = [
-                self._get_struct_kerningrecord(obj.FontFlagsWideCodes)
-                for _ in range(obj.KerningCount)]
-        return obj
-
     def _handle_tag_definesprite(self):
         """Handle the DefineSprite tag."""
         obj = _make_object("DefineSprite")
@@ -562,11 +529,9 @@ class SWFParser:
         obj.ControlTags = tags
         return obj
 
-    def _handle_tag_doaction(self):
-        """Handle the DoAction tag."""
-        obj = _make_object("DoAction")
-        obj.Actions = actions = []
-
+    def _generic_action_parser(self):
+        """Generic parser for Actions."""
+        actions = []
         while True:
             action_code = unpack_ui8(self._src)
             if action_code == 0:
@@ -603,6 +568,11 @@ class SWFParser:
                 action = _make_object(action_name)
 
             actions.append(action)
+
+    def _handle_tag_doaction(self):
+        """Handle the DoAction tag."""
+        obj = _make_object("DoAction")
+        obj.Actions = self._generic_action_parser()
         return obj
 
     def _handle_tag_fileattributes(self):
@@ -697,6 +667,148 @@ class SWFParser:
         """Handle the RemoveObject2 tag."""
         obj = _make_object("RemoveObject2")
         obj.Depth = unpack_ui16(self._src)
+        return obj
+
+    def _handle_tag_defineshape(self):
+        """Handle the DefineShape tag."""
+        obj = _make_object("DefineShape")
+        obj.ShapeId = unpack_ui16(self._src)
+        obj.ShapeBounds = self._get_struct_rect()
+        obj.Shapes = self._get_struct_shapewithstyle(1)
+        return obj
+
+    def _handle_tag_defineshape2(self):
+        """Handle the DefineShape2 tag."""
+        obj = _make_object("DefineShape2")
+        obj.ShapeId = unpack_ui16(self._src)
+        obj.ShapeBounds = self._get_struct_rect()
+        obj.Shapes = self._get_struct_shapewithstyle(2)
+        return obj
+
+    def _generic_definefont_parser(self, obj):
+        """A generic parser for several DefineFontX."""
+        obj.FontID = unpack_ui16(self._src)
+
+        bc = BitConsumer(self._src)
+        obj.FontFlagsHasLayout = bc.u_get(1)
+        obj.FontFlagsShiftJIS = bc.u_get(1)
+        obj.FontFlagsSmallText = bc.u_get(1)
+        obj.FontFlagsANSI = bc.u_get(1)
+        obj.FontFlagsWideOffsets = bc.u_get(1)
+        obj.FontFlagsWideCodes = bc.u_get(1)
+        obj.FontFlagsItalic = bc.u_get(1)
+        obj.FontFlagsBold = bc.u_get(1)
+
+        obj.LanguageCode = self._get_struct_langcode()
+        obj.FontNameLen = unpack_ui8(self._src)
+        obj.FontName = "".join(chr(unpack_ui8(self._src))
+                               for i in range(obj.FontNameLen))
+        if obj.FontName[-1] == '\x00':  # most probably ends in null, clean it
+            obj.FontName = obj.FontName[:-1]
+
+        obj.NumGlyphs = num_glyphs = unpack_ui16(self._src)
+        getter_wide = unpack_ui32 if obj.FontFlagsWideOffsets else unpack_ui16
+        obj.OffsetTable = [getter_wide(self._src) for _ in range(num_glyphs)]
+        obj.CodeTableOffset = getter_wide(self._src)
+        obj.GlyphShapeTable = [self._get_struct_shape()
+                               for _ in range(num_glyphs)]
+        obj.CodeTable = [unpack_ui16(self._src) for _ in range(num_glyphs)]
+
+        if obj.FontFlagsHasLayout:
+            obj.FontAscent = unpack_ui16(self._src)
+            obj.FontDecent = unpack_ui16(self._src)
+            obj.FontLeading = unpack_ui16(self._src)
+            obj.FontAdvanceTable = [unpack_si16(self._src)
+                                    for _ in range(num_glyphs)]
+            obj.FontBoundsTable = [self._get_struct_rect()
+                                   for _ in range(num_glyphs)]
+            obj.KerningCount = unpack_ui16(self._src)
+            obj.FontKerningTable = [
+                self._get_struct_kerningrecord(obj.FontFlagsWideCodes)
+                for _ in range(obj.KerningCount)]
+
+    def _handle_tag_definefont2(self):
+        """Handle the DefineFont2 tag."""
+        obj = _make_object("DefineFont2")
+        self._generic_definefont_parser(obj)
+        return obj
+
+    def _handle_tag_definefont3(self):
+        """Handle the DefineFont3 tag."""
+        obj = _make_object("DefineFont3")
+        self._generic_definefont_parser(obj)
+        return obj
+
+    def _handle_tag_definebutton2(self):
+        """Handle the DefineButton2 tag."""
+        obj = _make_object("DefineButton2")
+        obj.ButtonId = unpack_ui16(self._src)
+
+        bc = BitConsumer(self._src)
+        bc.ReservedFlags = bc.u_get(7)
+        bc.TrackAsMenu = bc.u_get(1)
+
+        obj.ActionOffset = unpack_ui16(self._src)
+
+        # characters
+        obj.Characters = characters = []
+        while True:
+            end_flag = unpack_ui8(self._src)
+            if end_flag == 0:
+                # all done
+                obj.CharacterEndFlag = 0
+                break
+
+            # we have a BUTTONRECORD, let's go back the 8 bits and set the obj
+            self._src.seek(-1, io.SEEK_CUR)
+            character = _make_object("ButtonRecord")
+            characters.append(character)
+
+            bc = BitConsumer(self._src)
+            character.ButtonReserved = bc.u_get(2)
+            character.ButtonHasBlendMode = bc.u_get(1)
+            character.ButtonHasFilterList = bc.u_get(1)
+            character.ButtonStateHitTest = bc.u_get(1)
+            character.ButtonStateDown = bc.u_get(1)
+            character.ButtonStateOver = bc.u_get(1)
+            character.ButtonStateUp = bc.u_get(1)
+
+            character.CharacterId = unpack_ui16(self._src)
+            character.PlaceDepth = unpack_ui16(self._src)
+            character.PlaceMatrix = self._get_struct_matrix()
+            character.ColorTransform = self._get_struct_cxformwithalpha()
+            if character.ButtonHasFilterList:
+                # FIXME: didn't find in the spec what is a FILTERLIST
+                character.FilterList = "Unknown"
+            if character.ButtonHasBlendMode:
+                character.BlendMode = unpack_ui8(self._src)
+
+        obj.Actions = actions = []
+        still_have_actions = True
+        while still_have_actions:
+            end_flag = unpack_ui16(self._src)
+            if end_flag == 0:
+                # this is the last action, parse it and then exit
+                still_have_actions = False
+
+            bca = _make_object("ButtonCondAction")
+            actions.append(bca)
+            bca.CondActionSize = end_flag
+
+            bc = BitConsumer(self._src)
+            bca.CondIdleToOverDown = bc.u_get(1)
+            bca.CondOutDownToIdle = bc.u_get(1)
+            bca.CondOutDownToOverDown = bc.u_get(1)
+            bca.CondOverDownToOutDown = bc.u_get(1)
+            bca.CondOverDownToOverUp = bc.u_get(1)
+            bca.CondOverUpToOverDown = bc.u_get(1)
+            bca.CondOverUpToIdle = bc.u_get(1)
+            bca.CondIdleToOverUp = bc.u_get(1)
+
+            bca.CondKeyPress = bc.u_get(7)
+            bca.CondOverDownToIdle = bc.u_get(1)
+            bca.Actions = self._generic_action_parser()
+
         return obj
 
     def _get_struct_rect(self):
@@ -888,8 +1000,14 @@ class SWFParser:
                         shape_number)
                     # these two not only belong to the record, but also
                     # modifies the number of bits read in the future
-                    record.NumFillBits = num_fill_bits = bc.u_get(4)
-                    record.NumLineBits = num_line_bits = bc.u_get(4)
+                    # if shape number bigs enough (didn't find this in the
+                    # spec, but works for now, maybe '2' is not the limit...)
+                    if shape_number > 2:
+                        record.NumFillBits = num_fill_bits = bc.u_get(4)
+                        record.NumLineBits = num_line_bits = bc.u_get(4)
+                    else:
+                        record.NumFillBits = bc.u_get(4)
+                        record.NumLineBits = bc.u_get(4)
 
                     # reset the BC here, as the structures just read work at
                     # byte level
@@ -1005,7 +1123,7 @@ class SWFParser:
         """Get the values for the SHAPEWITHSTYLE record."""
         obj = _make_object("ShapeWithStyle")
         obj.FillStyles = self._get_struct_fillstylearray(shape_number)
-        obj.FillStyles = self._get_struct_linestylearray(shape_number)
+        obj.LineStyles = self._get_struct_linestylearray(shape_number)
         bc = BitConsumer(self._src)
         obj.NumFillBits = n_fill_bits = bc.u_get(4)
         obj.NumlineBits = n_line_bits = bc.u_get(4)
@@ -1066,6 +1184,13 @@ class SWFParser:
         obj.ConstantPool = pool = []
         for _ in range(count):
             pool.append(self._get_struct_string())
+        return obj
+
+    def _handle_actiongeturl(self):
+        """Handle the ActionGetURL action."""
+        obj = _make_object("ActionGetURL")
+        obj.UrlString = self._get_struct_string()
+        obj.TargetString = self._get_struct_string()
         return obj
 
 

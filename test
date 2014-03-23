@@ -3,6 +3,7 @@
 # Copyright 2014 Facundo Batista
 
 set -eu
+export PYTHONPATH=yaswfp
 
 if [ $# -ne 0 ]; then
     TARGET="$@"
