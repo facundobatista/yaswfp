@@ -34,7 +34,7 @@ import collections
 import io
 import zlib
 
-from helpers import (
+from .helpers import (
     BitConsumer,
     unpack_si16,
     unpack_ui16,
@@ -42,7 +42,7 @@ from helpers import (
     unpack_ui8,
 )
 
-VERSION = 0.2
+VERSION = 0.3
 
 # name of each tag (as a dict, not a list, for easier human consumption)
 TAG_NAMES = {
