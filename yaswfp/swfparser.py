@@ -33,14 +33,13 @@ is found.
 import collections
 import io
 import zlib
-
-from helpers import (
-    BitConsumer,
-    unpack_si16,
-    unpack_ui16,
-    unpack_ui32,
-    unpack_ui8,
-)
+from .helpers import (
+        BitConsumer,
+        unpack_si16,
+        unpack_ui16,
+        unpack_ui32,
+        unpack_ui8,
+    )
 
 VERSION = 0.2
 
@@ -1239,29 +1238,3 @@ def parsefile(filename):
     with open(filename, 'rb') as fh:
         return SWFParser(fh)
 
-
-if __name__ == '__main__':
-    import argparse
-
-    parser = argparse.ArgumentParser(
-        description='Parse a SWF file and show all its internals')
-    parser.add_argument('filepath', help='the SWF file to parse')
-    parser.add_argument('-t', '--show-tags', action='store_true',
-                        help='show the first level tags of the file')
-    parser.add_argument('-e', '--extended', action='store_true',
-                        help='show all objects with full detail and nested')
-    parser.add_argument('-c', '--coverage', action='store_true',
-                        help='indicate a percentage of coverage of given file')
-    args = parser.parse_args()
-
-    swf = parsefile(args.filepath)
-    print(swf.header)
-    print("Tags count:", len(swf.tags))
-
-    if args.coverage:
-        _coverage(swf.tags)
-
-    if args.show_tags or args.extended:
-        f = repr if args.extended else str
-        for tag in swf.tags:
-            print(f(tag))
