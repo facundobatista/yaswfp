@@ -33,14 +33,22 @@ is found.
 import collections
 import io
 import zlib
-
-from helpers import (
-    BitConsumer,
-    unpack_si16,
-    unpack_ui16,
-    unpack_ui32,
-    unpack_ui8,
-)
+try:
+    from helpers import (
+        BitConsumer,
+        unpack_si16,
+        unpack_ui16,
+        unpack_ui32,
+        unpack_ui8,
+    )
+except ImportError:
+    from yaswfp.helpers import(
+        BitConsumer,
+        unpack_si16,
+        unpack_ui16,
+        unpack_ui32,
+        unpack_ui8,
+    )
 
 VERSION = 0.2
 
