@@ -9,11 +9,11 @@ You can pronounce whatever you like :)
 How to use it
 -------------
 
-You can use ``swfparser.py`` as command line program or as a module.
+You can use ``swfparser`` as command line program.
 
 If you execute directly the usage is::
 
-    swfparser.py [-h] [-t] [-e] filepath
+    swfparser [-h] [-t] [-e] filepath
 
     positional arguments:
       filepath         the SWF file to parse
@@ -23,7 +23,7 @@ If you execute directly the usage is::
       -t, --show-tags  show the first level tags of the file
       -e, --extended   show all objects with full detail and nested
 
-If you want to use it as a module, you can use the ``SWFParser`` class
+If you want to use ``swfparser`` as a module, you can use the ``SWFParser`` class
 directly or the handy ``parsefile`` function::
 
     >>> swf = swfparser.parsefile(<yourSWFfile>)

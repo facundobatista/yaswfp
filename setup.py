@@ -45,5 +45,5 @@ setup(
     long_description=README,
     url='http://github.com/facundobatista/yaswfp',
     packages=['yaswfp'],
-    scripts=[os.path.join('yaswfp', 'swfparser.py')]
+    scripts=[os.path.join('bin', 'swfparser')]
 )
