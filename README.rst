@@ -1,3 +1,5 @@
+.. image:: https://travis-ci.org/facundobatista/yaswfp.png?branch=master   :target: https://travis-ci.org/andresriancho/yaswfp
+
 yaswfp
 ======
 

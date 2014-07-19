@@ -1,3 +1,4 @@
+#
 # Copyright 2013-2014 Facundo Batista
 #
 # This program is free software: you can redistribute it and/or modify it
@@ -28,7 +29,7 @@ in the SWFParser to change the behaviour when an still-not-done object
 is found.
 """
 
-# ¡Py3!
+from __future__ import division
 
 import collections
 import io
@@ -247,7 +248,7 @@ def _repr(obj):
     return t
 
 
-class SWFObject:
+class SWFObject(object):
     """A super class for all the objects created here."""
 
     def __init__(self):

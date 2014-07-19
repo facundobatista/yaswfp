@@ -11,6 +11,22 @@ else
     TARGET="."
 fi
 
-nosetests3 -v -s $TARGET
-flake8 $TARGET
+# Detect python version to setup the right commands to run
+PYTHON_VERSION=`python -c 'import sys; print(sys.version_info[0])'`
+if [ $PYTHON_VERSION == "2\n" ]; then
+    NOSE="nosetests3"
+else
+    NOSE="nosetests"
+fi
+
+# Show the commands that are run
+set -x
+
+flake8 --exit-zero $TARGET
+
+$NOSE -v -s $TARGET
+NOSE_EXIT_CODE=$?
+
 rm -rf __pycache__
+
+exit $NOSE_EXIT_CODE
