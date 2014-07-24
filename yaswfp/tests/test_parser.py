@@ -51,9 +51,3 @@ class StructsTestCase(unittest.TestCase):
         parser = SWFParser(io.BytesIO(b'\x8c\xac\x29'))
         # compose: 0101001 0101100 0001100
         self.assertEqual(parser._get_struct_encodedu32(), 677388)
-
-    @patch.object(SWFParser, '_get_header')
-    @patch.object(SWFParser, '_process_tags')
-    def test_fixed8(self, _a, _b):
-        parser = SWFParser(io.BytesIO(b'\x80\x07'))
-        self.assertEqual(parser._get_struct_fixed8(), 7.5)

@@ -19,7 +19,7 @@
 import io
 import unittest
 
-from yaswfp.helpers import BitConsumer, unpack_ui8, unpack_ui32
+from yaswfp.helpers import BitConsumer, unpack_ui8, unpack_ui32, unpack_fixed8
 
 
 class BitConsumerTestCase(unittest.TestCase):
@@ -88,3 +88,7 @@ class BitPacksTestCase(unittest.TestCase):
     def test_ui32(self):
         src = io.BytesIO(b'\x98\x19\x02\x00')
         assert unpack_ui32(src) == 137624
+
+    def test_fixed8(self):
+        src = io.BytesIO(b'\x80\x07')
+        assert unpack_fixed8(src) == 7.5

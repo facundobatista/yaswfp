@@ -50,6 +50,48 @@ def unpack_ui32(src):
     return struct.unpack("<I", src.read(4))[0]
 
 
+def unpack_fixed8(src):
+    """Get a FIXED8 value."""
+    dec_part = unpack_ui8(src)
+    int_part = unpack_ui8(src)
+    return int_part + dec_part / 256
+
+
+def unpack_fixed16(src):
+    """Get a FIXED16 value (called plainly FIXED in the spec)."""
+    dec_part = unpack_ui16(src)
+    int_part = unpack_ui16(src)
+    return int_part + dec_part / 65536
+
+
+def unpack_float16(src):
+    """Read and unpack a 16b float.
+
+    The structure is:
+    - 1 bit for the sign
+    . 5 bits for the exponent, with an exponent bias of 16
+    - 10 bits for the mantissa
+    """
+    bc = BitConsumer(src)
+    sign = bc.u_get(1)
+    exponent = bc.u_get(5)
+    mantissa = bc.u_get(10)
+    exponent -= 16
+    mantissa /= 2 ** 10
+    num = (-1 ** sign) * mantissa * (10 ** exponent)
+    return num
+
+
+def unpack_float(src):
+    """Read and unpack a 32b float."""
+    return struct.unpack("<f", src.read(4))[0]
+
+
+def unpack_double(src):
+    """Read and unpack a 64b float."""
+    return struct.unpack("<d", src.read(8))[0]
+
+
 class BitConsumer:
     """Get a byte source, yield bunch of bits."""
     def __init__(self, src):
@@ -79,6 +121,10 @@ class BitConsumer:
 
     def s_get(self, quant):
         """Return a number using the given quantity of signed bits."""
+        if quant == 1:
+            # special case, just return that unsigned value
+            return self.u_get(1)
+
         sign = self.u_get(1)
         raw_number = self.u_get(quant - 1)
         if sign == 0:

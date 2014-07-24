@@ -28,8 +28,6 @@ in the SWFParser to change the behaviour when an still-not-done object
 is found.
 """
 
-# ¡Py3!
-
 import collections
 import io
 import zlib
@@ -40,6 +38,11 @@ from .helpers import (
     unpack_ui16,
     unpack_ui32,
     unpack_ui8,
+    unpack_fixed8,
+    unpack_fixed16,
+    unpack_float16,
+    unpack_float,
+    unpack_double,
 )
 
 VERSION = 0.3
@@ -283,6 +286,7 @@ class SWFParser:
     def __init__(self, src):
         self._src = src
         self._version = None
+        self._last_defined_glyphs_quantity = None
         self.header = self._get_header()
         self.tags = self._process_tags()
 
@@ -368,10 +372,10 @@ class SWFParser:
         """Handle the DefineBits tag."""
         obj = _make_object("DefineBits")
         obj.CharacterID = unpack_ui16(self._src)
-        assert self._src.read(2) == b'\xff\xd8'  # SOI marker
+        assert self._src.read(2) == b'\xFF\xD8'  # SOI marker
         eoimark1 = eoimark2 = None
         allbytes = []
-        while not (eoimark1 == b'\xff' and eoimark2 == b'\xd9'):
+        while not (eoimark1 == b'\xFF' and eoimark2 == b'\xD9'):
             newbyte = self._src.read(1)
             allbytes.append(newbyte)
             eoimark1 = eoimark2
@@ -488,10 +492,8 @@ class SWFParser:
             obj.InitialText = self._get_struct_string()
         return obj
 
-    def _handle_tag_placeobject2(self):
-        """Handle the PlaceObject2 tag."""
-        obj = _make_object("PlaceObject2")
-
+    def _generic_placeobject_parser(self, obj, version):
+        """A generic parser for several PlaceObjectX."""
         bc = BitConsumer(self._src)
         obj.PlaceFlagHasClipActions = bc.u_get(1)
         obj.PlaceFlagHasClipDepth = bc.u_get(1)
@@ -502,7 +504,22 @@ class SWFParser:
         obj.PlaceFlagHasCharacter = bc.u_get(1)
         obj.PlaceFlagMove = bc.u_get(1)
 
+        if version == 3:
+            obj.Reserved = bc.u_get(1)
+            obj.PlaceFlagOpaqueBackground = bc.u_get(1)
+            obj.PlaceFlagHasVisible = bc.u_get(1)
+            obj.PlaceFlagHasImage = bc.u_get(1)
+            obj.PlaceFlagHasClassName = bc.u_get(1)
+            obj.PlaceFlagHasCacheAsBitmap = bc.u_get(1)
+            obj.PlaceFlagHasBlendMode = bc.u_get(1)
+            obj.PlaceFlagHasFilterList = bc.u_get(1)
+
         obj.Depth = unpack_ui16(self._src)
+
+        if version == 3:
+            if obj.PlaceFlagHasClassName or (
+                    obj.PlaceFlagHasImage and obj.PlaceFlagHasCharacter):
+                obj.ClassName = self._get_struct_string()
 
         if obj.PlaceFlagHasCharacter:
             obj.CharacterId = unpack_ui16(self._src)
@@ -516,8 +533,31 @@ class SWFParser:
             obj.Name = self._get_struct_string()
         if obj.PlaceFlagHasClipDepth:
             obj.ClipDepth = unpack_ui16(self._src)
+
+        if version == 3:
+            if obj.PlaceFlagHasFilterList:
+                obj.SurfaceFilterList = self._get_struct_filterlist()
+            if obj.PlaceFlagHasBlendMode:
+                obj.BlendMode = unpack_ui8(self._src)
+            if obj.PlaceFlagHasCacheAsBitmap:
+                obj.BitmapCache = unpack_ui8(self._src)
+            if obj.PlaceFlagHasVisible:
+                obj.Visible = unpack_ui8(self._src)
+                obj.BackgroundColor = self._get_struct_rgba()
+
         if obj.PlaceFlagHasClipActions:
             obj.ClipActions = self._get_struct_clipactions()
+
+    def _handle_tag_placeobject2(self):
+        """Handle the PlaceObject2 tag."""
+        obj = _make_object("PlaceObject2")
+        self._generic_placeobject_parser(obj, 2)
+        return obj
+
+    def _handle_tag_placeobject3(self):
+        """Handle the PlaceObject3 tag."""
+        obj = _make_object("PlaceObject3")
+        self._generic_placeobject_parser(obj, 3)
         return obj
 
     def _handle_tag_definesprite(self):
@@ -554,10 +594,13 @@ class SWFParser:
                              'name': action_name}
                     action = type("UnknownAction", (SWFObject,), _dict)()
                     action.raw_payload = action_payload
+                    actions.append(action)
                 else:
                     prev_pos = self._src.tell()
-                    action = action_meth()
-                    assert action is not None, action_name
+                    for action in action_meth(action_len):
+                        assert action is not None, action_name
+                        actions.append(action)
+
                     quant_read = self._src.tell() - prev_pos
                     if quant_read != action_len:
                         raise RuntimeError(
@@ -566,8 +609,8 @@ class SWFParser:
                             action_name, quant_read, action_len))
             else:
                 action = _make_object(action_name)
-
-            actions.append(action)
+                actions.append(action)
+        return actions
 
     def _handle_tag_doaction(self):
         """Handle the DoAction tag."""
@@ -685,6 +728,14 @@ class SWFParser:
         obj.Shapes = self._get_struct_shapewithstyle(2)
         return obj
 
+    def _handle_tag_defineshape3(self):
+        """Handle the DefineShape3 tag."""
+        obj = _make_object("DefineShape3")
+        obj.ShapeId = unpack_ui16(self._src)
+        obj.ShapeBounds = self._get_struct_rect()
+        obj.Shapes = self._get_struct_shapewithstyle(3)
+        return obj
+
     def _generic_definefont_parser(self, obj):
         """A generic parser for several DefineFontX."""
         obj.FontID = unpack_ui16(self._src)
@@ -707,6 +758,7 @@ class SWFParser:
             obj.FontName = obj.FontName[:-1]
 
         obj.NumGlyphs = num_glyphs = unpack_ui16(self._src)
+        self._last_defined_glyphs_quantity = num_glyphs
         getter_wide = unpack_ui32 if obj.FontFlagsWideOffsets else unpack_ui16
         obj.OffsetTable = [getter_wide(self._src) for _ in range(num_glyphs)]
         obj.CodeTableOffset = getter_wide(self._src)
@@ -778,8 +830,7 @@ class SWFParser:
             character.PlaceMatrix = self._get_struct_matrix()
             character.ColorTransform = self._get_struct_cxformwithalpha()
             if character.ButtonHasFilterList:
-                # FIXME: didn't find in the spec what is a FILTERLIST
-                character.FilterList = "Unknown"
+                character.FilterList = self._get_struct_filterlist()
             if character.ButtonHasBlendMode:
                 character.BlendMode = unpack_ui8(self._src)
 
@@ -809,6 +860,88 @@ class SWFParser:
             bca.CondOverDownToIdle = bc.u_get(1)
             bca.Actions = self._generic_action_parser()
 
+        return obj
+
+    def _handle_tag_enabledebugger2(self):
+        """Handle the EnableDebugger2 tag."""
+        obj = _make_object("EnableDebugger2")
+        obj.Reserved = unpack_ui16(self._src)
+        obj.Password = self._get_struct_string()
+        return obj
+
+    def _handle_tag_scriptlimits(self):
+        """Handle the ScriptLimits tag."""
+        obj = _make_object("ScriptLimits")
+        obj.MaxRecursionDepth = unpack_ui16(self._src)
+        obj.ScriptTimeoutSeconds = unpack_ui16(self._src)
+        return obj
+
+    def _handle_tag_framelabel(self):
+        """Handle the FrameLabel tag."""
+        obj = _make_object("FrameLabel")
+        obj.Name = self._get_struct_string()
+        return obj
+
+    def _handle_tag_jpegtables(self):
+        """Handle the JPEGTables tag."""
+        obj = _make_object("JPEGTables")
+        assert self._src.read(2) == b'\xFF\xD8'  # SOI marker
+        eoimark1 = eoimark2 = None
+        allbytes = []
+        while not (eoimark1 == b'\xFF' and eoimark2 == b'\xD9'):
+            newbyte = self._src.read(1)
+            allbytes.append(newbyte)
+            eoimark1 = eoimark2
+            eoimark2 = newbyte
+        obj.JPEGData = b"".join(allbytes)
+        return obj
+
+    def _handle_tag_definefontalignzones(self):
+        """Handle the DefineFontAlignZones tag."""
+        obj = _make_object("DefineFontAlignZones")
+        obj.FontId = unpack_ui16(self._src)
+        bc = BitConsumer(self._src)
+        obj.CSMTableHint = bc.u_get(2)
+        obj.Reserved = bc.u_get(6)
+
+        obj.ZoneTable = zone_records = []
+        glyph_count = self._last_defined_glyphs_quantity
+        self._last_defined_glyphs_quantity = None
+        for _ in range(glyph_count):
+            zone_record = _make_object("ZoneRecord")
+            zone_records.append(zone_record)
+            zone_record.NumZoneData = unpack_ui8(self._src)
+            zone_record.ZoneData = zone_data = []
+            for _ in range(zone_record.NumZoneData):
+                zone_datum = _make_object("ZoneData")
+                zone_data.append(zone_datum)
+                zone_datum.AlignmentCoordinate = unpack_float16(self._src)
+                zone_datum.Range = unpack_float16(self._src)
+            bc = BitConsumer(self._src)
+            zone_record.Reserved = bc.u_get(6)
+            zone_record.ZoneMaskY = bc.u_get(1)
+            zone_record.ZoneMaskX = bc.u_get(1)
+        return obj
+
+    def _handle_tag_definefontname(self):
+        """Handle the DefineFontName tag."""
+        obj = _make_object("DefineFontName")
+        obj.FontId = unpack_ui16(self._src)
+        obj.FontName = self._get_struct_string()
+        obj.FontCopyright = self._get_struct_string()
+        return obj
+
+    def _handle_tag_csmtextsettings(self):
+        """Handle the CSMTextSettings tag."""
+        obj = _make_object("CSMTextSettings")
+        obj.TextId = unpack_ui16(self._src)
+        bc = BitConsumer(self._src)
+        obj.UseFlashType = bc.u_get(2)
+        obj.GridFit = bc.u_get(3)
+        obj.Reserved1 = bc.u_get(3)
+        obj.Thickness = unpack_float(self._src)
+        obj.Sharpness = unpack_float(self._src)
+        obj.Reserved2 = unpack_ui8(self._src)
         return obj
 
     def _get_struct_rect(self):
@@ -937,6 +1070,14 @@ class SWFParser:
         bc = BitConsumer(self._src)
 
         while True:
+
+            # Ugliest hack ever of my life... I can not understand yet
+            # how after the previous loop, that always reset to bytes,
+            # this struct starts after 7 bits. We need this hack for
+            # yaswfp/tests/samples/dqsv1.swf to work ok.
+            if self._src.tell() == 63292:
+                bc.u_get(7)
+
             type_flag = bc.u_get(1)
             if type_flag:
                 # edge record
@@ -949,23 +1090,23 @@ class SWFParser:
                     record.NumBits = num_bits
                     record.GeneralLineFlag = general_line_flag = bc.u_get(1)
                     if general_line_flag:
-                        record.DeltaX = bc.u_get(num_bits + 2)
-                        record.DeltaY = bc.u_get(num_bits + 2)
+                        record.DeltaX = bc.s_get(num_bits + 2)
+                        record.DeltaY = bc.s_get(num_bits + 2)
                     else:
-                        record.VertLineFlag = vert_line_flag = bc.u_get(1)
+                        record.VertLineFlag = vert_line_flag = bc.s_get(1)
                         if vert_line_flag:
-                            record.DeltaY = bc.u_get(num_bits + 2)
+                            record.DeltaY = bc.s_get(num_bits + 2)
                         else:
-                            record.DeltaX = bc.u_get(num_bits + 2)
+                            record.DeltaX = bc.s_get(num_bits + 2)
                 else:
                     record = _make_object('CurvedEdgeRecord')
                     record.TypeFlag = 1
                     record.StraightFlag = 0
                     record.NumBits = num_bits
-                    record.ControlDeltaX = bc.u_get(num_bits + 2)
-                    record.ControlDeltaY = bc.u_get(num_bits + 2)
-                    record.AnchorDeltaX = bc.u_get(num_bits + 2)
-                    record.AnchorDeltaY = bc.u_get(num_bits + 2)
+                    record.ControlDeltaX = bc.s_get(num_bits + 2)
+                    record.ControlDeltaY = bc.s_get(num_bits + 2)
+                    record.AnchorDeltaX = bc.s_get(num_bits + 2)
+                    record.AnchorDeltaY = bc.s_get(num_bits + 2)
 
             else:
                 # non edge record
@@ -1168,67 +1309,274 @@ class SWFParser:
             else:
                 record.Color = self._get_struct_rgba()
 
-        obj.FocalPoint = self._get_struct_fixed8()
+        obj.FocalPoint = unpack_fixed8(self._src)
         return obj
 
-    def _get_struct_fixed8(self):
-        """Get a FIXED8 value."""
-        dec_part = unpack_ui8(self._src)
-        int_part = unpack_ui8(self._src)
-        return int_part + dec_part / 256
+    def _get_struct_filterlist(self):
+        """Get the values for the FILTERLIST record."""
+        obj = _make_object("FilterList")
+        obj.NumberOfFilters = unpack_ui8(self._src)
+        obj.Filter = filters = []
+        # how to decode each filter type (and name), according to the filter id
+        filter_type = [
+            ("DropShadowFilter", self._get_struct_dropshadowfilter),  # 0
+            ("BlurFilter", self._get_struct_blurfilter),  # 1
+            ("GlowFilter", self._get_struct_glowfilter),  # 2...
+            ("BevelFilter", self._get_struct_bevelfilter),
+            ("GradientGlowFilter", self._get_struct_gradientglowfilter),
+            ("ConvolutionFilter", self._get_struct_convolutionfilter),
+            ("ColorMatrixFilter", self._get_struct_colormatrixfilter),
+            ("GradientBevelFilter", self._get_struct_gradientbevelfilter),  # 7
+        ]
 
-    def _handle_actionconstantpool(self):
+        for _ in range(obj.NumberOfFilters):
+            _filter = _make_object("Filter")
+            filters.append(_filter)
+
+            _filter.FilterId = unpack_ui8(self._src)
+            name, func = filter_type[_filter.FilterId]
+            setattr(_filter, name, func())
+
+    def _get_struct_dropshadowfilter(self):
+        """Get the values for the DROPSHADOWFILTER record."""
+        obj = _make_object("DropShadowFilter")
+        obj.DropShadowColor = self._get_struct_rgba()
+        obj.BlurX = unpack_fixed16(self._src)
+        obj.BlurY = unpack_fixed16(self._src)
+        obj.Angle = unpack_fixed16(self._src)
+        obj.Distance = unpack_fixed16(self._src)
+        obj.Strength = unpack_fixed8(self._src)
+        bc = BitConsumer(self._src)
+        obj.InnerShadow = bc.u_get(1)
+        obj.Knockout = bc.u_get(1)
+        obj.CompositeSource = bc.u_get(1)
+        obj.Passes = bc.u_get(5)
+        return obj
+
+    def _get_struct_blurfilter(self):
+        """Get the values for the BLURFILTER record."""
+        obj = _make_object("BlurFilter")
+        obj.BlurX = unpack_fixed16(self._src)
+        obj.BlurY = unpack_fixed16(self._src)
+        bc = BitConsumer(self._src)
+        obj.Passes = bc.u_get(5)
+        obj.Reserved = bc.u_get(3)
+        return obj
+
+    def _get_struct_glowfilter(self):
+        """Get the values for the GLOWFILTER record."""
+        obj = _make_object("GlowFilter")
+        obj.GlowColor = self._get_struct_rgba()
+        obj.BlurX = unpack_fixed16(self._src)
+        obj.BlurY = unpack_fixed16(self._src)
+        obj.Strength = unpack_fixed8(self._src)
+        bc = BitConsumer(self._src)
+        obj.InnerGlow = bc.u_get(1)
+        obj.Knockout = bc.u_get(1)
+        obj.CompositeSource = bc.u_get(1)
+        obj.Passes = bc.u_get(5)
+        return obj
+
+    def _get_struct_bevelfilter(self):
+        """Get the values for the BEVELFILTER record."""
+        obj = _make_object("BevelFilter")
+        obj.ShadowColor = self._get_struct_rgba()
+        obj.HighlightColor = self._get_struct_rgba()
+        obj.BlurX = unpack_fixed16(self._src)
+        obj.BlurY = unpack_fixed16(self._src)
+        obj.Angle = unpack_fixed16(self._src)
+        obj.Distance = unpack_fixed16(self._src)
+        obj.Strength = unpack_fixed8(self._src)
+        bc = BitConsumer(self._src)
+        obj.InnerShadow = bc.u_get(1)
+        obj.Knockout = bc.u_get(1)
+        obj.CompositeSource = bc.u_get(1)
+        obj.OnTop = bc.u_get(1)
+        obj.Passes = bc.u_get(4)
+        return obj
+
+    def _get_struct_gradientglowfilter(self):
+        """Get the values for the GRADIENTGLOWFILTER record."""
+        obj = _make_object("GradientBevelFilter")
+        obj.NumColors = num_colors = unpack_ui8(self._src)
+        obj.GradientColors = [self._get_struct_rgba()
+                              for _ in range(num_colors)]
+        obj.GradientRatio = [unpack_ui8(self._src)
+                             for _ in range(num_colors)]
+        obj.BlurX = unpack_fixed16(self._src)
+        obj.BlurY = unpack_fixed16(self._src)
+        obj.Angle = unpack_fixed16(self._src)
+        obj.Distance = unpack_fixed16(self._src)
+        obj.Strength = unpack_fixed8(self._src)
+        bc = BitConsumer(self._src)
+        obj.InnerShadow = bc.u_get(1)
+        obj.Knockout = bc.u_get(1)
+        obj.CompositeSource = bc.u_get(1)
+        obj.OnTop = bc.u_get(1)
+        obj.Passes = bc.u_get(4)
+        return obj
+
+    def _get_struct_convolutionfilter(self):
+        """Get the values for the CONVOLUTIONFILTER record."""
+        obj = _make_object("ConvolutionFilter")
+        obj.MatrixX = unpack_ui8(self._src)
+        obj.MatrixY = unpack_ui8(self._src)
+        obj.Divisor = unpack_float(self._src)
+        obj.Bias = unpack_float(self._src)
+
+        _quant = obj.MatrixX * obj.MatrixY
+        obj.Matrix = [unpack_float(self._src) for _ in range(_quant)]
+
+        obj.DefaultColor = self._get_struct_rgba()
+        bc = BitConsumer(self._src)
+        obj.Reserved = bc.u_get(6)
+        obj.Clamp = bc.u_get(1)
+        obj.PreserveAlpha = bc.u_get(1)
+        return obj
+
+    def _get_struct_colormatrixfilter(self):
+        """Get the values for the COLORMATRIXFILTER record."""
+        obj = _make_object("ColorMatrixFilter")
+        obj.Matrix = [unpack_float(self._src) for _ in range(20)]
+        return obj
+
+    def _get_struct_gradientbevelfilter(self):
+        """Get the values for the GRADIENTBEVELFILTER record."""
+        obj = _make_object("GradientBevelFilter")
+        obj.NumColors = num_colors = unpack_ui8(self._src)
+        obj.GradientColors = [self._get_struct_rgba()
+                              for _ in range(num_colors)]
+        obj.GradientRatio = [unpack_ui8(self._src)
+                             for _ in range(num_colors)]
+        obj.BlurX = unpack_fixed16(self._src)
+        obj.BlurY = unpack_fixed16(self._src)
+        obj.Angle = unpack_fixed16(self._src)
+        obj.Distance = unpack_fixed16(self._src)
+        obj.Strength = unpack_fixed8(self._src)
+        bc = BitConsumer(self._src)
+        obj.InnerShadow = bc.u_get(1)
+        obj.Knockout = bc.u_get(1)
+        obj.CompositeSource = bc.u_get(1)
+        obj.OnTop = bc.u_get(1)
+        obj.Passes = bc.u_get(4)
+        return obj
+
+    def _handle_actionconstantpool(self, _):
         """Handle the ActionConstantPool action."""
         obj = _make_object("ActionConstantPool")
         obj.Count = count = unpack_ui16(self._src)
         obj.ConstantPool = pool = []
         for _ in range(count):
             pool.append(self._get_struct_string())
-        return obj
+        yield obj
 
-    def _handle_actiongeturl(self):
+    def _handle_actiongeturl(self, _):
         """Handle the ActionGetURL action."""
         obj = _make_object("ActionGetURL")
         obj.UrlString = self._get_struct_string()
         obj.TargetString = self._get_struct_string()
-        return obj
+        yield obj
 
+    def _handle_actionpush(self, length):
+        """Handle the ActionPush action."""
+        init_pos = self._src.tell()
+        while self._src.tell() < init_pos + length:
+            obj = _make_object("ActionPush")
+            obj.Type = unpack_ui8(self._src)
+            # name and how to read each type
+            push_types = {
+                0: ("String", self._get_struct_string),
+                1: ("Float", lambda: unpack_float(self._src)),
+                2: ("Null", lambda: None),
+                4: ("RegisterNumber", lambda: unpack_ui8(self._src)),
+                5: ("Boolean", lambda: unpack_ui8(self._src)),
+                6: ("Double", lambda: unpack_double(self._src)),
+                7: ("Integer", lambda: unpack_ui32(self._src)),
+                8: ("Constant8", lambda: unpack_ui8(self._src)),
+                9: ("Constant16", lambda: unpack_ui16(self._src)),
+            }
+            name, func = push_types[obj.Type]
+            setattr(obj, name, func())
+            yield obj
 
-def _coverage(tags):
-    """Calculate the coverage of a file."""
-    items_unk = collections.Counter()
-    items_ok = collections.Counter()
+    def _handle_actiondefinefunction(self, _):
+        """Handle the ActionDefineFunction action."""
+        obj = _make_object("ActionDefineFunction")
+        obj.FunctionName = self._get_struct_string()
+        obj.NumParams = unpack_ui16(self._src)
+        for i in range(1, obj.NumParams + 1):
+            setattr(obj, "param" + str(i), self._get_struct_string())
+        obj.CodeSize = unpack_ui16(self._src)
+        yield obj
 
-    def _go_deep(obj):
-        """Recursive function to find internal attributes."""
-        if type(obj).__name__ in ('UnknownObject', 'UnknownAction'):
-            # blatantly unknown
-            items_unk[obj.name] += 1
-        elif obj.name in ('DefineMorphShape2', 'ClipActions'):
-            # these are incomplete, see FIXMEs in the code above
-            items_unk[obj.name] += 1
-        else:
-            # fully parsed
-            items_ok[obj.name] += 1
+    def _handle_actionif(self, _):
+        """Handle the ActionIf action."""
+        obj = _make_object("ActionIf")
+        obj.BranchOffset = unpack_si16(self._src)
+        yield obj
 
-        for name in obj._attribs:
-            attr = getattr(obj, name)
-            if isinstance(attr, SWFObject):
-                _go_deep(attr)
+    def _handle_actiondefinefunction2(self, _):
+        """Handle the ActionDefineFunction2 action."""
+        obj = _make_object("ActionDefineFunction2")
+        obj.FunctionName = self._get_struct_string()
+        obj.NumParams = unpack_ui16(self._src)
+        obj.RegisterCount = unpack_ui8(self._src)
+        bc = BitConsumer(self._src)
+        obj.PreloadParentFlag = bc.u_get(1)
+        obj.PreloadRootFlag = bc.u_get(1)
+        obj.SupressSuperFlag = bc.u_get(1)
+        obj.PreloadSuperFlag = bc.u_get(1)
+        obj.SupressArgumentsFlag = bc.u_get(1)
+        obj.PreloadArgumentsFlag = bc.u_get(1)
+        obj.SupressThisFlag = bc.u_get(1)
+        obj.PreloadThisFlag = bc.u_get(1)
+        obj.Reserved = bc.u_get(7)
+        obj.PreloadGlobalFlag = bc.u_get(1)
+        obj.Parameters = parameters = []
+        for _ in range(obj.NumParams):
+            parameter = _make_object("Parameter")
+            parameters.append(parameter)
+            parameter.Register = unpack_ui8(self._src)
+            parameter.ParamName = self._get_struct_string()
+        obj.CodeSize = unpack_ui16(self._src)
+        yield obj
 
-    for tag in tags:
-        _go_deep(tag)
+    def coverage(self):
+        """Calculate the coverage of a file."""
+        items_unk = collections.Counter()
+        items_ok = collections.Counter()
 
-    full_count = sum(items_ok.values()) + sum(items_unk.values())
-    coverage = 100 * sum(items_ok.values()) / full_count
-    print("Coverage is {:.1f}% of {} total items".format(coverage, full_count))
-    print("Most common parsed objects:")
-    for k, v in items_ok.most_common(3):
-        print("{:5d} {}".format(v, k))
-    if items_unk:
-        print("Most common Unknown objects")
-        for k, v in items_unk.most_common(3):
+        def _go_deep(obj):
+            """Recursive function to find internal attributes."""
+            if type(obj).__name__ in ('UnknownObject', 'UnknownAction'):
+                # blatantly unknown
+                items_unk[obj.name] += 1
+            elif obj.name in ('DefineMorphShape2', 'ClipActions'):
+                # these are incomplete, see FIXMEs in the code above
+                items_unk[obj.name] += 1
+            else:
+                # fully parsed
+                items_ok[obj.name] += 1
+
+            for name in obj._attribs:
+                attr = getattr(obj, name)
+                if isinstance(attr, SWFObject):
+                    _go_deep(attr)
+
+        for tag in self.tags:
+            _go_deep(tag)
+
+        full_count = sum(items_ok.values()) + sum(items_unk.values())
+        coverage = 100 * sum(items_ok.values()) / full_count
+        print("Coverage is {:.1f}% of {} total items".format(coverage,
+                                                             full_count))
+        print("Most common parsed objects:")
+        for k, v in items_ok.most_common(3):
             print("{:5d} {}".format(v, k))
+        if items_unk:
+            print("Most common Unknown objects")
+            for k, v in items_unk.most_common(3):
+                print("{:5d} {}".format(v, k))
 
 
 def parsefile(filename):
@@ -1238,30 +1586,3 @@ def parsefile(filename):
     """
     with open(filename, 'rb') as fh:
         return SWFParser(fh)
-
-
-if __name__ == '__main__':
-    import argparse
-
-    parser = argparse.ArgumentParser(
-        description='Parse a SWF file and show all its internals')
-    parser.add_argument('filepath', help='the SWF file to parse')
-    parser.add_argument('-t', '--show-tags', action='store_true',
-                        help='show the first level tags of the file')
-    parser.add_argument('-e', '--extended', action='store_true',
-                        help='show all objects with full detail and nested')
-    parser.add_argument('-c', '--coverage', action='store_true',
-                        help='indicate a percentage of coverage of given file')
-    args = parser.parse_args()
-
-    swf = parsefile(args.filepath)
-    print(swf.header)
-    print("Tags count:", len(swf.tags))
-
-    if args.coverage:
-        _coverage(swf.tags)
-
-    if args.show_tags or args.extended:
-        f = repr if args.extended else str
-        for tag in swf.tags:
-            print(f(tag))
