@@ -151,7 +151,7 @@ class ReadQuantityController:
     def __exit__(self, *exc):
         """Exit the guarded block."""
         cur_pos = self._src.tell()
-        if cur_pos != self._started + self._should_read:
+        if cur_pos != self._started + self._should:
             t = "Bad reading quantity: started={} should={} ended={}".format(
                 self._started, self._should, cur_pos)
             raise ValueError(t)

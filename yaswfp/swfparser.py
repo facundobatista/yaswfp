@@ -46,7 +46,7 @@ from .helpers import (
     unpack_double,
 )
 
-VERSION = 0.5
+VERSION = 0.6
 
 # name of each tag (as a dict, not a list, for easier human consumption)
 TAG_NAMES = {
