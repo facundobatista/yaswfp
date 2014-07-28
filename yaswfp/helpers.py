@@ -135,3 +135,23 @@ class BitConsumer:
             complement = 2 ** (quant - 1) - 1
             number = -1 * ((raw_number ^ complement) + 1)
         return number
+
+
+class ReadQuantityController:
+    """A context manager that will complain if bad quantity is read."""
+    def __init__(self, src, should):
+        self._src = src
+        self._should = should
+        self._started = None
+
+    def __enter__(self):
+        """Enter the guarded block."""
+        self._started = self._src.tell()
+
+    def __exit__(self, *exc):
+        """Exit the guarded block."""
+        cur_pos = self._src.tell()
+        if cur_pos != self._started + self._should_read:
+            t = "Bad reading quantity: started={} should={} ended={}".format(
+                self._started, self._should, cur_pos)
+            raise ValueError(t)

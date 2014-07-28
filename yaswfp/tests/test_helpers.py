@@ -19,7 +19,13 @@
 import io
 import unittest
 
-from yaswfp.helpers import BitConsumer, unpack_ui8, unpack_ui32, unpack_fixed8
+from yaswfp.helpers import (
+    BitConsumer,
+    ReadQuantityController,
+    unpack_ui8,
+    unpack_ui32,
+    unpack_fixed8,
+)
 
 
 class BitConsumerTestCase(unittest.TestCase):
@@ -92,3 +98,33 @@ class BitPacksTestCase(unittest.TestCase):
     def test_fixed8(self):
         src = io.BytesIO(b'\x80\x07')
         assert unpack_fixed8(src) == 7.5
+
+
+class GuardedTestCase(unittest.TestCase):
+    """Check the ReadQuantityController class."""
+
+    def test_guarded_ok(self):
+        src = io.BytesIO(b'abcde')
+        with ReadQuantityController(src, 5):
+            self.assertEqual(src.read(3), b'abc')
+            self.assertEqual(src.read(2), b'de')
+
+    def test_guarded_too_much(self):
+        src = io.BytesIO(b'abcde')
+        try:
+            with ReadQuantityController(src, 4):
+                src.read(5)
+        except ValueError:
+            pass
+        else:
+            self._fail("Should have failed")
+
+    def test_guarded_too_little(self):
+        src = io.BytesIO(b'abcde')
+        try:
+            with ReadQuantityController(src, 4):
+                src.read(2)
+        except ValueError:
+            pass
+        else:
+            self._fail("Should have failed")

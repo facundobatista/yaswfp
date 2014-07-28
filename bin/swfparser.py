@@ -19,6 +19,13 @@
 """Parse a SWF file and expose all its internals."""
 
 import argparse
+import os
+import sys
+
+project_basedir = os.path.abspath(os.path.dirname(os.path.dirname(
+                                  os.path.realpath(sys.argv[0]))))
+if project_basedir not in sys.path:
+    sys.path.insert(0, project_basedir)
 
 from yaswfp import swfparser
 

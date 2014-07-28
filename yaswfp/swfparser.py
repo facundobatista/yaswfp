@@ -34,6 +34,7 @@ import zlib
 
 from .helpers import (
     BitConsumer,
+    ReadQuantityController,
     unpack_si16,
     unpack_ui16,
     unpack_ui32,
@@ -45,7 +46,7 @@ from .helpers import (
     unpack_double,
 )
 
-VERSION = 0.4
+VERSION = 0.5
 
 # name of each tag (as a dict, not a list, for easier human consumption)
 TAG_NAMES = {
@@ -358,13 +359,20 @@ class SWFParser:
 
             # we know the tag type, and have the handler, let's process it
             prev_pos = self._src.tell()
-            tag = tag_meth()
-            assert tag is not None, tag_name
-            quant_read = self._src.tell() - prev_pos
-            if quant_read != tag_len:
-                raise RuntimeError("Bad bytes consumption by tag {!r} "
-                                   "handler (did {}, should {})".format(
-                                   tag_name, quant_read, tag_len))
+            self._src.guard = tag_len
+            try:
+                with ReadQuantityController(self._src, tag_len):
+                    tag = tag_meth()
+                assert tag is not None, tag_name
+            except ValueError:
+                # an attempt to read too much happened; create a failing
+                # object with the raw payload
+                self._src.guard = None
+                self._src.seek(prev_pos)
+                tag_payload = self._src.read(tag_len)
+                _dict = {'__str__': _repr, '__repr__': _repr, 'name': tag_name}
+                tag = type("FailingObject", (SWFObject,), _dict)()
+                tag.raw_payload = tag_payload
             tags.append(tag)
         return tags
 
@@ -606,7 +614,7 @@ class SWFParser:
                         raise RuntimeError(
                             "Bad bytes consumption by action {!r} handler "
                             "(did {}, should {})".format(
-                            action_name, quant_read, action_len))
+                                action_name, quant_read, action_len))
             else:
                 action = _make_object(action_name)
                 actions.append(action)
@@ -1070,14 +1078,6 @@ class SWFParser:
         bc = BitConsumer(self._src)
 
         while True:
-
-            # Ugliest hack ever of my life... I can not understand yet
-            # how after the previous loop, that always reset to bytes,
-            # this struct starts after 7 bits. We need this hack for
-            # yaswfp/tests/samples/dqsv1.swf to work ok.
-            if self._src.tell() == 63292:
-                bc.u_get(7)
-
             type_flag = bc.u_get(1)
             if type_flag:
                 # edge record

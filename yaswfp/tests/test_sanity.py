@@ -487,6 +487,10 @@ class SanityTestCase(unittest.TestCase):
         self.assertEqual(t.name, 'JPEGTables')
         self.assertEqual(_get_attribs(t), {'JPEGData', })
 
+        t = swf.tags[9]
+        self.assertEqual(t.__class__.__name__, 'FailingObject')
+        self.assertEqual(t.name, 'DefineShape2')
+
         t = swf.tags[12]
         self.assertEqual(t.name, 'DefineFontAlignZones')
         self.assertEqual(_get_attribs(t), {
