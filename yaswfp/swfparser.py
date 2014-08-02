@@ -46,7 +46,7 @@ from .helpers import (
     unpack_double,
 )
 
-VERSION = 0.6
+VERSION = 0.7
 
 # name of each tag (as a dict, not a list, for easier human consumption)
 TAG_NAMES = {
@@ -382,14 +382,15 @@ class SWFParser:
         obj.CharacterID = unpack_ui16(self._src)
         assert self._src.read(2) == b'\xFF\xD8'  # SOI marker
         eoimark1 = eoimark2 = None
-        allbytes = []
+        allbytes = [b'\xFF\xD8']
         while not (eoimark1 == b'\xFF' and eoimark2 == b'\xD9'):
             newbyte = self._src.read(1)
             allbytes.append(newbyte)
             eoimark1 = eoimark2
             eoimark2 = newbyte
 
-        obj.JPEGData = b"".join(allbytes)
+        # concatenate everything, removing the end mark
+        obj.JPEGData = b"".join(allbytes[:-2])
         return obj
 
     def _generic_definetext_parser(self, obj, rgb_struct):
@@ -895,13 +896,15 @@ class SWFParser:
         obj = _make_object("JPEGTables")
         assert self._src.read(2) == b'\xFF\xD8'  # SOI marker
         eoimark1 = eoimark2 = None
-        allbytes = []
+        allbytes = [b'\xFF\xD8']
         while not (eoimark1 == b'\xFF' and eoimark2 == b'\xD9'):
             newbyte = self._src.read(1)
             allbytes.append(newbyte)
             eoimark1 = eoimark2
             eoimark2 = newbyte
-        obj.JPEGData = b"".join(allbytes)
+
+        # concatenate everything, removing the end mark
+        obj.JPEGData = b"".join(allbytes[:-2])
         return obj
 
     def _handle_tag_definefontalignzones(self):

@@ -486,6 +486,8 @@ class SanityTestCase(unittest.TestCase):
         t = swf.tags[4]
         self.assertEqual(t.name, 'JPEGTables')
         self.assertEqual(_get_attribs(t), {'JPEGData', })
+        self.assertEqual(t.JPEGData[:8], b'\xff\xd8\xff\xdb\x00C\x00\x06')
+        self.assertEqual(t.JPEGData[-8:], b'\xf3\xf4\xf5\xf6\xf7\xf8\xf9\xfa')
 
         t = swf.tags[9]
         self.assertEqual(t.__class__.__name__, 'FailingObject')
