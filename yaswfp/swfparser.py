@@ -382,7 +382,7 @@ class SWFParser:
         obj.CharacterID = unpack_ui16(self._src)
         assert self._src.read(2) == b'\xFF\xD8'  # SOI marker
         eoimark1 = eoimark2 = None
-        allbytes = [b'\xFF\xD8']
+        allbytes = []
         while not (eoimark1 == b'\xFF' and eoimark2 == b'\xD9'):
             newbyte = self._src.read(1)
             allbytes.append(newbyte)
@@ -390,7 +390,7 @@ class SWFParser:
             eoimark2 = newbyte
 
         # concatenate everything, removing the end mark
-        obj.JPEGData = b"".join(allbytes[:-2])
+        obj.JPEGData = b"".join(allbytes)
         return obj
 
     def _generic_definetext_parser(self, obj, rgb_struct):
