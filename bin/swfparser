@@ -48,7 +48,43 @@ print("Tags count:", len(swf.tags))
 if args.coverage:
     swf.coverage()
 
-if args.show_tags or args.extended:
-    f = repr if args.extended else str
+if args.show_tags:
     for tag in swf.tags:
-        print(f(tag))
+        print(tag)
+
+if args.extended:
+    def _show(obj, level, prefix=""):
+        indent = level * "    "
+        indent_sub = indent + "    "
+
+        if isinstance(obj, list):
+            prefix_next = "- "
+            children = [(item.name, item) for item in obj]
+        else:
+            prefix_next = ""
+            children = [(name, getattr(obj, name)) for name in obj._attribs]
+            class_name = obj.__class__.__name__
+            if obj.name == class_name:
+                tit = obj.name
+            else:
+                tit = "{} ({})".format(obj.name, class_name)
+            if children:
+                final = ":"
+            else:
+                final = ""
+            print("{}{}{}{}".format(indent, prefix, tit, final))
+
+        for name, child in children:
+            if hasattr(child, '_attribs'):
+                # complex child
+                _show(child, level + 1, prefix_next)
+            elif isinstance(child, list) and child and any(
+                    isinstance(x, swfparser.SWFObject) for x in child):
+                # special case for a list
+                print("{}{}{}:".format(indent_sub, prefix, name))
+                _show(child, level + 1, prefix_next)
+            else:
+                print("{}{}: {!r}".format(indent_sub, name, child))
+
+    for tag in swf.tags:
+        _show(tag, 0)
