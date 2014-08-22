@@ -393,6 +393,23 @@ class SWFParser:
         obj.JPEGData = b"".join(allbytes)
         return obj
 
+    def _handle_tag_definebitsjpeg2(self):
+        """Handle the DefineBitsJPEG2 tag."""
+        obj = _make_object("DefineBitsJPEG2")
+        obj.CharacterID = unpack_ui16(self._src)
+        assert self._src.read(2) == b'\xFF\xD8'  # SOI marker
+        eoimark1 = eoimark2 = None
+        allbytes = []
+        while not (eoimark1 == b'\xFF' and eoimark2 == b'\xD9'):
+            newbyte = self._src.read(1)
+            allbytes.append(newbyte)
+            eoimark1 = eoimark2
+            eoimark2 = newbyte
+
+        # concatenate everything, removing the end mark
+        obj.ImageData = b"".join(allbytes)
+        return obj
+
     def _generic_definetext_parser(self, obj, rgb_struct):
         """Generic parser for the DefineTextN tags."""
         obj.CharacterID = unpack_ui16(self._src)
