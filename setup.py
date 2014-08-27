@@ -32,7 +32,7 @@ def _get_version():
     with open("yaswfp/swfparser.py") as fh:
         for line in fh:
             if line.startswith("VERSION = "):
-                return line.split("=")[-1].strip()
+                return line.split("=")[-1].strip().strip('"')
 
 
 setup(
@@ -46,4 +46,7 @@ setup(
     url='http://github.com/facundobatista/yaswfp',
     packages=['yaswfp'],
     scripts=["bin/swfparser"],
+    package_data={
+        '': ['COPYING', 'README.rst'],
+    }
 )
