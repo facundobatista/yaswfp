@@ -73,27 +73,31 @@ class SanityTestCase(unittest.TestCase):
         self.assertEqual(t.name, 'DefineShape4')
         self.assertEqual(_get_attribs(t), {
             'UsesNonScalingStrokes', 'Shapes', 'UsesFillWindingRule',
-            'ShapeBounds', 'EdgeBounds', 'UsesScalingStrokes', 'ShapeId'})
+            'NShapeBoundsBits', 'ShapeBounds', 'NEdgeBoundsBits',
+            'EdgeBounds', 'UsesScalingStrokes', 'ShapeId'})
 
         t = swf.tags[5]
         self.assertEqual(t.name, 'DefineMorphShape2')
         self.assertEqual(_get_attribs(t), {
-            'Offset', 'EndEdgeBounds', 'EndEdges', 'UsesNonScalingStrokes',
-            'StartEdgeBounds', 'CharacterId', 'UsesScalingStrokes',
-            'StartBounds', 'EndBounds'})
+            'Offset', 'NEndEdgeBoundsBits', 'EndEdgeBounds', 'EndEdges',
+            'UsesNonScalingStrokes', 'NStartEdgeBoundsBits', 'StartEdgeBounds',
+            'CharacterId', 'UsesScalingStrokes', 'NStartBoundsBits',
+            'StartBounds', 'NEndBoundsBits', 'EndBounds'})
 
         t = swf.tags[6]
         self.assertEqual(t.name, 'DefineMorphShape2')
         self.assertEqual(_get_attribs(t), {
-            'Offset', 'EndEdgeBounds', 'EndEdges', 'UsesNonScalingStrokes',
-            'StartEdgeBounds', 'CharacterId', 'UsesScalingStrokes',
-            'StartBounds', 'EndBounds'})
+            'Offset', 'NEndEdgeBoundsBits', 'EndEdgeBounds', 'EndEdges',
+            'UsesNonScalingStrokes', 'NStartEdgeBoundsBits', 'StartEdgeBounds',
+            'CharacterId', 'UsesScalingStrokes', 'NStartBoundsBits',
+            'StartBounds', 'NEndBoundsBits', 'EndBounds'})
 
         t = swf.tags[7]
         self.assertEqual(t.name, 'DefineShape4')
         self.assertEqual(_get_attribs(t), {
             'UsesNonScalingStrokes', 'Shapes', 'UsesFillWindingRule',
-            'ShapeBounds', 'EdgeBounds', 'UsesScalingStrokes', 'ShapeId'})
+            'NShapeBoundsBits', 'ShapeBounds', 'NEdgeBoundsBits',
+            'EdgeBounds', 'UsesScalingStrokes', 'ShapeId'})
 
         t = swf.tags[8]
         self.assertEqual(t.name, 'DefineSprite')
@@ -112,7 +116,8 @@ class SanityTestCase(unittest.TestCase):
         self.assertEqual(t.name, 'DefineShape4')
         self.assertEqual(_get_attribs(t), {
             'UsesNonScalingStrokes', 'Shapes', 'UsesFillWindingRule',
-            'ShapeBounds', 'EdgeBounds', 'UsesScalingStrokes', 'ShapeId'})
+            'NShapeBoundsBits', 'ShapeBounds', 'NEdgeBoundsBits',
+            'EdgeBounds', 'UsesScalingStrokes', 'ShapeId'})
 
         t = swf.tags[11]
         self.assertEqual(t.name, 'PlaceObject2')
@@ -130,7 +135,8 @@ class SanityTestCase(unittest.TestCase):
         self.assertEqual(t.name, 'DefineShape4')
         self.assertEqual(_get_attribs(t), {
             'UsesNonScalingStrokes', 'Shapes', 'UsesFillWindingRule',
-            'ShapeBounds', 'EdgeBounds', 'UsesScalingStrokes', 'ShapeId'})
+            'NShapeBoundsBits', 'ShapeBounds', 'NEdgeBoundsBits',
+            'EdgeBounds', 'UsesScalingStrokes', 'ShapeId'})
 
         t = swf.tags[14]
         self.assertEqual(t.name, 'PlaceObject2')
@@ -148,7 +154,8 @@ class SanityTestCase(unittest.TestCase):
         self.assertEqual(t.name, 'DefineShape4')
         self.assertEqual(_get_attribs(t), {
             'UsesNonScalingStrokes', 'Shapes', 'UsesFillWindingRule',
-            'ShapeBounds', 'EdgeBounds', 'UsesScalingStrokes', 'ShapeId'})
+            'NShapeBoundsBits', 'ShapeBounds', 'NEdgeBoundsBits',
+            'EdgeBounds', 'UsesScalingStrokes', 'ShapeId'})
 
         t = swf.tags[17]
         self.assertEqual(t.name, 'PlaceObject2')
@@ -406,7 +413,8 @@ class SanityTestCase(unittest.TestCase):
 
         t = swf.tags[1]
         self.assertEqual(t.name, 'DefineShape')
-        self.assertEqual(_get_attribs(t), {'ShapeId', 'ShapeBounds', 'Shapes'})
+        self.assertEqual(_get_attribs(t), {
+            'ShapeId', 'NShapeBoundsBits', 'ShapeBounds', 'Shapes'})
         self.assertEqual(t.Shapes.FillStyles.FillStyleCount, 1)
         self.assertEqual(t.Shapes.LineStyles.LineStyleCount, 0)
 
@@ -422,55 +430,63 @@ class SanityTestCase(unittest.TestCase):
         t = swf.tags[3]
         self.assertEqual(t.name, 'DefineText')
         self.assertEqual(_get_attribs(t), {
-            'CharacterID', 'TextBounds', 'TextMatrix', 'GlyphBits',
-            'AdvanceBits', 'TextRecords', 'EndOfRecordsFlag'})
+            'CharacterID', 'NTextBoundsBits', 'TextBounds', 'TextMatrix',
+            'GlyphBits', 'AdvanceBits', 'TextRecords', 'EndOfRecordsFlag'})
         self.assertEqual(len(t.TextRecords), 2)
 
         t = swf.tags[4]
         self.assertEqual(t.name, 'DefineShape')
-        self.assertEqual(_get_attribs(t), {'ShapeId', 'ShapeBounds', 'Shapes'})
+        self.assertEqual(_get_attribs(t), {
+            'ShapeId', 'NShapeBoundsBits', 'ShapeBounds', 'Shapes'})
         self.assertEqual(t.Shapes.FillStyles.FillStyleCount, 1)
         self.assertEqual(t.Shapes.LineStyles.LineStyleCount, 1)
 
         t = swf.tags[5]
         self.assertEqual(t.name, 'DefineShape')
-        self.assertEqual(_get_attribs(t), {'ShapeId', 'ShapeBounds', 'Shapes'})
+        self.assertEqual(_get_attribs(t), {
+            'ShapeId', 'NShapeBoundsBits', 'ShapeBounds', 'Shapes'})
         self.assertEqual(t.Shapes.FillStyles.FillStyleCount, 1)
         self.assertEqual(t.Shapes.LineStyles.LineStyleCount, 1)
 
         t = swf.tags[6]
         self.assertEqual(t.name, 'DefineShape')
-        self.assertEqual(_get_attribs(t), {'ShapeId', 'ShapeBounds', 'Shapes'})
+        self.assertEqual(_get_attribs(t), {
+            'ShapeId', 'NShapeBoundsBits', 'ShapeBounds', 'Shapes'})
         self.assertEqual(t.Shapes.FillStyles.FillStyleCount, 1)
         self.assertEqual(t.Shapes.LineStyles.LineStyleCount, 0)
 
         t = swf.tags[7]
         self.assertEqual(t.name, 'DefineShape')
-        self.assertEqual(_get_attribs(t), {'ShapeId', 'ShapeBounds', 'Shapes'})
+        self.assertEqual(_get_attribs(t), {
+            'ShapeId', 'NShapeBoundsBits', 'ShapeBounds', 'Shapes'})
         self.assertEqual(t.Shapes.FillStyles.FillStyleCount, 1)
         self.assertEqual(t.Shapes.LineStyles.LineStyleCount, 1)
 
         t = swf.tags[8]
         self.assertEqual(t.name, 'DefineShape')
-        self.assertEqual(_get_attribs(t), {'ShapeId', 'ShapeBounds', 'Shapes'})
+        self.assertEqual(_get_attribs(t), {
+            'ShapeId', 'NShapeBoundsBits', 'ShapeBounds', 'Shapes'})
         self.assertEqual(t.Shapes.FillStyles.FillStyleCount, 1)
         self.assertEqual(t.Shapes.LineStyles.LineStyleCount, 1)
 
         t = swf.tags[9]
         self.assertEqual(t.name, 'DefineShape')
-        self.assertEqual(_get_attribs(t), {'ShapeId', 'ShapeBounds', 'Shapes'})
+        self.assertEqual(_get_attribs(t), {
+            'ShapeId', 'NShapeBoundsBits', 'ShapeBounds', 'Shapes'})
         self.assertEqual(t.Shapes.FillStyles.FillStyleCount, 1)
         self.assertEqual(t.Shapes.LineStyles.LineStyleCount, 1)
 
         t = swf.tags[10]
         self.assertEqual(t.name, 'DefineShape')
-        self.assertEqual(_get_attribs(t), {'ShapeId', 'ShapeBounds', 'Shapes'})
+        self.assertEqual(_get_attribs(t), {
+            'ShapeId', 'NShapeBoundsBits', 'ShapeBounds', 'Shapes'})
         self.assertEqual(t.Shapes.FillStyles.FillStyleCount, 1)
         self.assertEqual(t.Shapes.LineStyles.LineStyleCount, 1)
 
         t = swf.tags[11]
         self.assertEqual(t.name, 'DefineShape2')
-        self.assertEqual(_get_attribs(t), {'ShapeId', 'ShapeBounds', 'Shapes'})
+        self.assertEqual(_get_attribs(t), {
+            'ShapeId', 'NShapeBoundsBits', 'ShapeBounds', 'Shapes'})
         self.assertEqual(t.Shapes.FillStyles.FillStyleCount, 1)
         self.assertEqual(t.Shapes.LineStyles.LineStyleCount, 0)
 
@@ -661,7 +677,7 @@ class SanityTestCase(unittest.TestCase):
         t = swf.tags[30]
         self.assertEqual(t.name, 'DefineShape3')
         self.assertEqual(_get_attribs(t), {
-            'ShapeId', 'ShapeBounds', 'Shapes'})
+            'ShapeId', 'NShapeBoundsBits', 'ShapeBounds', 'Shapes'})
 
         t = swf.tags[33]
         self.assertEqual(t.name, 'DefineSprite')
