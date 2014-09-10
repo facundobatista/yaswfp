@@ -31,13 +31,13 @@ class StructsTestCase(unittest.TestCase):
     @patch.object(SWFParser, '_process_tags')
     def test_rect_simple(self, _a, _b):
         parser = SWFParser(io.BytesIO(b'\x1b\xae\x80'))
-        self.assertEqual(parser._get_struct_rect(), (3, 5, 3, 5))
+        self.assertEqual(parser._get_struct_rect(), (3, (3, 5, 3, 5)))
 
     @patch.object(SWFParser, '_get_header')
     @patch.object(SWFParser, '_process_tags')
     def test_rect_long(self, _a, _b):
         parser = SWFParser(io.BytesIO(b'\x70\x00\x0a\x8c\x00\x00\xda\xc0'))
-        self.assertEqual(parser._get_struct_rect(), (0, 5400, 0, 7000))
+        self.assertEqual(parser._get_struct_rect(), (14, (0, 5400, 0, 7000)))
 
     @patch.object(SWFParser, '_get_header')
     @patch.object(SWFParser, '_process_tags')

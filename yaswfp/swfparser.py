@@ -309,7 +309,7 @@ class SWFParser:
             fh = self._src = io.BytesIO(uncompressed)
 
         # second part of the header
-        obj.FrameSize = self._get_struct_rect()
+        obj.NFrameSizeBits, obj.FrameSize = self._get_struct_rect()
         obj.FrameRate = unpack_ui16(fh)
         obj.FrameCount = unpack_ui16(fh)
         return obj
@@ -413,7 +413,7 @@ class SWFParser:
     def _generic_definetext_parser(self, obj, rgb_struct):
         """Generic parser for the DefineTextN tags."""
         obj.CharacterID = unpack_ui16(self._src)
-        obj.TextBounds = self._get_struct_rect()
+        obj.NTextBoundsBits, obj.TextBounds = self._get_struct_rect()
         obj.TextMatrix = self._get_struct_matrix()
         obj.GlyphBits = glyph_bits = unpack_ui8(self._src)
         obj.AdvanceBits = advance_bits = unpack_ui8(self._src)
@@ -476,7 +476,7 @@ class SWFParser:
         """Handle the DefineEditText tag."""
         obj = _make_object("DefineEditText")
         obj.CharacterID = unpack_ui16(self._src)
-        obj.Bounds = self._get_struct_rect()
+        obj.NBoundsBits, obj.Bounds = self._get_struct_rect()
 
         bc = BitConsumer(self._src)
         obj.HasText = bc.u_get(1)
@@ -688,8 +688,8 @@ class SWFParser:
         """Handle the DefineShape4 tag."""
         obj = _make_object("DefineShape4")
         obj.ShapeId = unpack_ui16(self._src)
-        obj.ShapeBounds = self._get_struct_rect()
-        obj.EdgeBounds = self._get_struct_rect()
+        obj.NShapeBoundsBits, obj.ShapeBounds = self._get_struct_rect()
+        obj.NEdgeBoundsBits, obj.EdgeBounds = self._get_struct_rect()
 
         bc = BitConsumer(self._src)
         bc.u_get(5)  # reserved
@@ -703,10 +703,10 @@ class SWFParser:
         """Handle the DefineMorphShape2 tag."""
         obj = _make_object("DefineMorphShape2")
         obj.CharacterId = unpack_ui16(self._src)
-        obj.StartBounds = self._get_struct_rect()
-        obj.EndBounds = self._get_struct_rect()
-        obj.StartEdgeBounds = self._get_struct_rect()
-        obj.EndEdgeBounds = self._get_struct_rect()
+        obj.NStartBoundsBits, obj.StartBounds = self._get_struct_rect()
+        obj.NEndBoundsBits, obj.EndBounds = self._get_struct_rect()
+        obj.NStartEdgeBoundsBits, obj.StartEdgeBounds = self._get_struct_rect()
+        obj.NEndEdgeBoundsBits, obj.EndEdgeBounds = self._get_struct_rect()
 
         bc = BitConsumer(self._src)
         bc.u_get(6)  # reserved
@@ -742,7 +742,7 @@ class SWFParser:
         """Handle the DefineShape tag."""
         obj = _make_object("DefineShape")
         obj.ShapeId = unpack_ui16(self._src)
-        obj.ShapeBounds = self._get_struct_rect()
+        obj.NShapeBoundsBits, obj.ShapeBounds = self._get_struct_rect()
         obj.Shapes = self._get_struct_shapewithstyle(1)
         return obj
 
@@ -750,7 +750,7 @@ class SWFParser:
         """Handle the DefineShape2 tag."""
         obj = _make_object("DefineShape2")
         obj.ShapeId = unpack_ui16(self._src)
-        obj.ShapeBounds = self._get_struct_rect()
+        obj.NShapeBoundsBits, obj.ShapeBounds = self._get_struct_rect()
         obj.Shapes = self._get_struct_shapewithstyle(2)
         return obj
 
@@ -758,7 +758,7 @@ class SWFParser:
         """Handle the DefineShape3 tag."""
         obj = _make_object("DefineShape3")
         obj.ShapeId = unpack_ui16(self._src)
-        obj.ShapeBounds = self._get_struct_rect()
+        obj.NShapeBoundsBits, obj.ShapeBounds = self._get_struct_rect()
         obj.Shapes = self._get_struct_shapewithstyle(3)
         return obj
 
@@ -798,8 +798,8 @@ class SWFParser:
             obj.FontLeading = unpack_ui16(self._src)
             obj.FontAdvanceTable = [unpack_si16(self._src)
                                     for _ in range(num_glyphs)]
-            obj.FontBoundsTable = [self._get_struct_rect()
-                                   for _ in range(num_glyphs)]
+            font_bounds = [self._get_struct_rect() for _ in range(num_glyphs)]
+            obj.NFontBoundsTableBits, obj.FontBoundsTable = zip(*font_bounds)
             obj.KerningCount = unpack_ui16(self._src)
             obj.FontKerningTable = [
                 self._get_struct_kerningrecord(obj.FontFlagsWideCodes)
@@ -976,7 +976,7 @@ class SWFParser:
         """Get the RECT structure."""
         bc = BitConsumer(self._src)
         nbits = bc.u_get(5)
-        return tuple(bc.u_get(nbits) for _ in range(4))
+        return (nbits, tuple(bc.u_get(nbits) for _ in range(4)))
 
     def _get_struct_rgb(self):
         """Get the RGB structure."""
