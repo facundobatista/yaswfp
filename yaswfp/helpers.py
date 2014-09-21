@@ -136,6 +136,21 @@ class BitConsumer:
             number = -1 * ((raw_number ^ complement) + 1)
         return number
 
+    def fb_get(self, quant, fb=16):
+        """Return a fixed bit number 
+
+        quant: number of bits to read
+        fb: number of bits in the integer and decimal part of the output
+            default is 16, resulting in a 16.16 fixed bit"""
+
+        raw_number = self.u_get(quant)
+
+        if quant == 1:
+            # special case, just return that unsigned value
+            return raw_number
+
+        return raw_number / (1 << fb)
+        
 
 class ReadQuantityController:
     """A context manager that will complain if bad quantity is read."""
