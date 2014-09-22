@@ -121,9 +121,10 @@ class BitConsumer:
 
     def s_get(self, quant):
         """Return a number using the given quantity of signed bits."""
-        if quant == 1:
+        if quant < 2:
             # special case, just return that unsigned value
-            return self.u_get(1)
+            # quant can also be 0
+            return self.u_get(quant)
 
         sign = self.u_get(1)
         raw_number = self.u_get(quant - 1)
@@ -137,20 +138,20 @@ class BitConsumer:
         return number
 
     def fb_get(self, quant, fb=16):
-        """Return a fixed bit number 
+        """Return a fixed bit number
 
         quant: number of bits to read
         fb: number of bits in the integer and decimal part of the output
             default is 16, resulting in a 16.16 fixed bit"""
 
-        raw_number = self.u_get(quant)
+        raw_number = self.s_get(quant)
 
         if quant == 1:
             # special case, just return that unsigned value
             return raw_number
 
         return raw_number / (1 << fb)
-        
+
 
 class ReadQuantityController:
     """A context manager that will complain if bad quantity is read."""
