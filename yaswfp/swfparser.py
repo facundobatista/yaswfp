@@ -284,8 +284,9 @@ class SWFParser:
 
     unknown_alert = False
 
-    def __init__(self, src):
+    def __init__(self, src, read_twips=True):
         self._src = src
+        self._read_twips = read_twips
         self._version = None
         self._last_defined_glyphs_quantity = None
         self.header = self._get_header()
@@ -976,7 +977,10 @@ class SWFParser:
         """Get the RECT structure."""
         bc = BitConsumer(self._src)
         nbits = bc.u_get(5)
-        return tuple(bc.u_get(nbits) for _ in range(4))
+        if self._read_twips:
+            return tuple(bc.s_get(nbits) for _ in range(4))
+        else:
+            return tuple(bc.s_get(nbits) / 20.0 for _ in range(4))
 
     def _get_struct_rgb(self):
         """Get the RGB structure."""
@@ -1052,20 +1056,23 @@ class SWFParser:
         obj.HasScale = bc.u_get(1)
         if obj.HasScale:
             obj.NScaleBits = n_scale_bits = bc.u_get(5)
-            obj.ScaleX = bc.u_get(n_scale_bits)
-            obj.ScaleY = bc.u_get(n_scale_bits)
+            obj.ScaleX = bc.fb_get(n_scale_bits)
+            obj.ScaleY = bc.fb_get(n_scale_bits)
 
         # rotate
         obj.HasRotate = bc.u_get(1)
         if obj.HasRotate:
             obj.NRotateBits = n_rotate_bits = bc.u_get(5)
-            obj.RotateSkew0 = bc.u_get(n_rotate_bits)
-            obj.RotateSkew1 = bc.u_get(n_rotate_bits)
+            obj.RotateSkew0 = bc.fb_get(n_rotate_bits)
+            obj.RotateSkew1 = bc.fb_get(n_rotate_bits)
 
         # translate
         obj.NTranslateBits = n_translate_bits = bc.u_get(5)
-        obj.TranslateX = bc.u_get(n_translate_bits)
-        obj.TranslateY = bc.u_get(n_translate_bits)
+        obj.TranslateX = bc.s_get(n_translate_bits)
+        obj.TranslateY = bc.s_get(n_translate_bits)
+        if not self._read_twips:
+            obj.TranslateX /= 20.0
+            obj.TranslateY /= 20.0
         return obj
 
     def _get_struct_cxformwithalpha(self):
@@ -1078,16 +1085,16 @@ class SWFParser:
         obj.NBits = nbits = bc.u_get(4)
 
         if obj.HasMultTerms:
-            obj.RedMultTerm = bc.u_get(nbits)
-            obj.GreenMultTerm = bc.u_get(nbits)
-            obj.BlueMultTerm = bc.u_get(nbits)
-            obj.AlphaMultTerm = bc.u_get(nbits)
+            obj.RedMultTerm = bc.s_get(nbits)
+            obj.GreenMultTerm = bc.s_get(nbits)
+            obj.BlueMultTerm = bc.s_get(nbits)
+            obj.AlphaMultTerm = bc.s_get(nbits)
 
         if obj.HasAddTerms:
-            obj.RedAddTerm = bc.u_get(nbits)
-            obj.GreenAddTerm = bc.u_get(nbits)
-            obj.BlueAddTerm = bc.u_get(nbits)
-            obj.AlphaAddTerm = bc.u_get(nbits)
+            obj.RedAddTerm = bc.s_get(nbits)
+            obj.GreenAddTerm = bc.s_get(nbits)
+            obj.BlueAddTerm = bc.s_get(nbits)
+            obj.AlphaAddTerm = bc.s_get(nbits)
 
         return obj
 
@@ -1417,7 +1424,7 @@ class SWFParser:
 
     def _get_struct_gradientglowfilter(self):
         """Get the values for the GRADIENTGLOWFILTER record."""
-        obj = _make_object("GradientBevelFilter")
+        obj = _make_object("GradientGlowFilter")
         obj.NumColors = num_colors = unpack_ui8(self._src)
         obj.GradientColors = [self._get_struct_rgba()
                               for _ in range(num_colors)]
@@ -1599,10 +1606,13 @@ class SWFParser:
                 print("{:5d} {}".format(v, k))
 
 
-def parsefile(filename):
+def parsefile(filename, read_twips=True):
     """Parse a SWF.
 
     If you have a file object already, just use SWFParser directly.
+
+    read_twips: True  - return values as read from the SWF
+                False - return values in pixels (at 100% zoom)
     """
     with open(filename, 'rb') as fh:
-        return SWFParser(fh)
+        return SWFParser(fh, read_twips)

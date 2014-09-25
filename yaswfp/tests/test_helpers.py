@@ -80,8 +80,14 @@ class BitConsumerTestCase(unittest.TestCase):
 
     def test_signed(self):
         bc = BitConsumer(io.BytesIO(b"\x7b\xf8"))
+        self.assertEqual(bc.s_get(0), None)
         self.assertEqual(bc.s_get(4), 7)
         self.assertEqual(bc.s_get(10), -258)
+
+    def test_fixedbit(self):
+        bc = BitConsumer(io.BytesIO(b"\x70\xbb\xc3\xd7\x00"))
+        self.assertEqual(bc.fb_get(17), 0.8807220458984375)
+        self.assertEqual(bc.fb_get(16), -0.470001220703125)
 
 
 class BitPacksTestCase(unittest.TestCase):
