@@ -118,6 +118,7 @@ TAG_NAMES = {
 }
 
 LANGCODES = {
+    0: "Sys",
     1: "Latin",
     2: "Japanese",
     3: "Korean",
