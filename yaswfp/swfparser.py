@@ -408,6 +408,33 @@ class SWFParser:
         obj.BitmapAlphaData = self._get_raw_bytes(-tag_end, unzip=True)
         return obj
 
+    def _handle_tag_definebitslossless(self):
+        """Handle the DefineBitsLossless tag."""
+        tag_end = self._src.tell() + self._src.guard
+        obj = _make_object("DefineBitsLossless")
+        obj.CharacterID = unpack_ui16(self._src)
+        obj.BitmapFormat = unpack_ui8(self._src)
+        obj.BitmapWidth = unpack_ui16(self._src)
+        obj.BitmapHeight = unpack_ui16(self._src)
+        if 3 == obj.BitmapFormat:
+            obj.BitmapColorTableSize = unpack_ui8(self._src)
+
+        BitmapData = self._get_raw_bytes(-tag_end, unzip=True)
+        _src = self._src
+        try:
+            self._src = io.BytesIO(BitmapData)
+            if 3 == obj.BitmapFormat:
+                obj.ColorTableRGB = [self._get_struct_rgb() for _ in range(obj.BitmapColorTableSize + 1)]
+                obj.ColormapPixelData = self._get_raw_bytes(-len(BitmapData))
+            elif obj.BitmapFormat in (4, 5):
+                obj.BitmapPixelData = BitmapData
+            else:
+                raise ValueError("unknown BitmapFormat: {}".format(obj.BitmapFormat))
+        finally:
+            self._src = _src
+
+        return obj
+
     def _generic_definetext_parser(self, obj, rgb_struct):
         """Generic parser for the DefineTextN tags."""
         obj.CharacterID = unpack_ui16(self._src)
