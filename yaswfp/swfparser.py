@@ -408,10 +408,9 @@ class SWFParser:
         obj.BitmapAlphaData = self._get_raw_bytes(-tag_end, unzip=True)
         return obj
 
-    def _handle_tag_definebitslossless(self):
-        """Handle the DefineBitsLossless tag."""
+    def _generic_definebitslossless_parser(self, obj, version):
+        """Generic parser for the DefineBitsLosslessN tags."""
         tag_end = self._src.tell() + self._src.guard
-        obj = _make_object("DefineBitsLossless")
         obj.CharacterID = unpack_ui16(self._src)
         obj.BitmapFormat = unpack_ui8(self._src)
         obj.BitmapWidth = unpack_ui16(self._src)
@@ -424,7 +423,13 @@ class SWFParser:
         try:
             self._src = io.BytesIO(BitmapData)
             if 3 == obj.BitmapFormat:
-                obj.ColorTableRGB = [self._get_struct_rgb() for _ in range(obj.BitmapColorTableSize + 1)]
+                if 1 == version:
+                    color = self._get_struct_rgb
+                elif 2 == version:
+                    color = self._get_struct_rgba
+                else:
+                    raise ValueError("unknown version: {}".format(version))
+                obj.ColorTableRGB = [color() for _ in range(obj.BitmapColorTableSize + 1)]
                 obj.ColormapPixelData = self._get_raw_bytes(-len(BitmapData))
             elif obj.BitmapFormat in (4, 5):
                 obj.BitmapPixelData = BitmapData
@@ -433,6 +438,16 @@ class SWFParser:
         finally:
             self._src = _src
 
+    def _handle_tag_definebitslossless(self):
+        """Handle the DefineBitsLossless tag."""
+        obj = _make_object("DefineBitsLossless")
+        self._generic_definebitslossless_parser(obj, 1)
+        return obj
+
+    def _handle_tag_definebitslossless2(self):
+        """Handle the DefineBitsLossless2 tag."""
+        obj = _make_object("DefineBitsLossless2")
+        self._generic_definebitslossless_parser(obj, 2)
         return obj
 
     def _generic_definetext_parser(self, obj, rgb_struct):
