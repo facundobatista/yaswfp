@@ -398,14 +398,27 @@ class SWFParser:
         obj.ImageData = self._get_raw_bytes(-tag_end)
         return obj
 
-    def _handle_tag_definebitsjpeg3(self):
-        """Handle the DefineBitsJPEG3 tag."""
+    def _generic_definebitsjpeg_parser(self, obj, version):
+        """Handle the DefineBitsJPEGN tag."""
         tag_end = self._src.tell() + self._src.guard
-        obj = _make_object("DefineBitsJPEG3")
         obj.CharacterID = unpack_ui16(self._src)
         obj.AlphaDataOffset = unpack_ui32(self._src)
+        if 4 == version:
+            # FIXME: 8.8 fixed point format in Comment
+            obj.DeblockParam = unpack_ui16(self._src)
         obj.ImageData = self._get_raw_bytes(obj.AlphaDataOffset)
         obj.BitmapAlphaData = self._get_raw_bytes(-tag_end, unzip=True)
+
+    def _handle_tag_definebitsjpeg3(self):
+        """Handle the DefineBitsJPEG3 tag."""
+        obj = _make_object("DefineBitsJPEG3")
+        self._generic_definebitsjpeg_parser(obj, 3)
+        return obj
+
+    def _handle_tag_definebitsjpeg4(self):
+        """Handle the DefineBitsJPEG4 tag."""
+        obj = _make_object("DefineBitsJPEG4")
+        self._generic_definebitsjpeg_parser(obj, 4)
         return obj
 
     def _generic_definebitslossless_parser(self, obj, version):
