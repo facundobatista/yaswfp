@@ -102,7 +102,7 @@ class BitConsumer:
     def u_get(self, quant):
         """Return a number using the given quantity of unsigned bits."""
         if not quant:
-            return
+            return 0
         bits = []
         while quant:
             if self._count == 0:
