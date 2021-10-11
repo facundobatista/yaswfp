@@ -398,6 +398,16 @@ class SWFParser:
         obj.ImageData = self._get_raw_bytes(-tag_end)
         return obj
 
+    def _handle_tag_definebitsjpeg3(self):
+        """Handle the DefineBitsJPEG3 tag."""
+        tag_end = self._src.tell() + self._src.guard
+        obj = _make_object("DefineBitsJPEG3")
+        obj.CharacterID = unpack_ui16(self._src)
+        obj.AlphaDataOffset = unpack_ui32(self._src)
+        obj.ImageData = self._get_raw_bytes(obj.AlphaDataOffset)
+        obj.BitmapAlphaData = self._get_raw_bytes(-tag_end, unzip=True)
+        return obj
+
     def _generic_definetext_parser(self, obj, rgb_struct):
         """Generic parser for the DefineTextN tags."""
         obj.CharacterID = unpack_ui16(self._src)
@@ -960,8 +970,8 @@ class SWFParser:
         obj.Reserved2 = unpack_ui8(self._src)
         return obj
 
-    def _get_raw_bytes(self, size):
-        '''Get raw bytes data'''
+    def _get_raw_bytes(self, size, unzip=False):
+        '''Get raw bytes data, optional uncompress with ZLIB'''
         pos = self._src.tell()
         try:
             # < 0: read until this pos
@@ -969,7 +979,10 @@ class SWFParser:
                 assert abs(size) > pos
                 size = abs(size) - pos
             data = self._src.read(size)
-            return data
+            if unzip:
+                return zlib.decompress(data)
+            else:
+                return data
         except Exception:
             self._src.seek(pos, io.SEEK_SET)
             raise
