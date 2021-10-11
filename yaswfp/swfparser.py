@@ -30,6 +30,7 @@ is found.
 
 import collections
 import io
+import warnings
 import zlib
 
 from .helpers import (
@@ -333,6 +334,7 @@ class SWFParser:
             try:
                 tag_name = TAG_NAMES[tag_type]
             except KeyError:
+                warnings.warn('unkonwn tag type: {}'.format(tag_type))
                 # malformed SWF, create and unknown object with malformed tag
                 tag_payload = self._src.read(tag_len)
                 _dict = {
@@ -351,6 +353,7 @@ class SWFParser:
                 if self.unknown_alert:
                     raise ValueError("Unknown tag: " + repr(tag_name))
 
+                warnings.warn('tag not supported: {}'.format(tag_name))
                 tag_payload = self._src.read(tag_len)
                 _dict = {'__str__': _repr, '__repr__': _repr, 'name': tag_name}
                 tag = type("UnknownObject", (SWFObject,), _dict)()
@@ -365,7 +368,8 @@ class SWFParser:
                 with ReadQuantityController(self._src, tag_len):
                     tag = tag_meth()
                 assert tag is not None, tag_name
-            except ValueError:
+            except ValueError as e:
+                warnings.warn('processing {} tag: {}'.format(tag_name, e))
                 # an attempt to read too much happened; create a failing
                 # object with the raw payload
                 self._src.guard = None
