@@ -442,12 +442,13 @@ class SWFParser:
                     color = self._get_struct_rgba
                 else:
                     raise ValueError("unknown version: {}".format(version))
-                obj.ColorTableRGB = [color() for _ in range(obj.BitmapColorTableSize + 1)]
+                obj.ColorTableRGB = [
+                    color() for _ in range(obj.BitmapColorTableSize + 1)]
                 obj.ColormapPixelData = self._get_raw_bytes(-len(BitmapData))
             elif obj.BitmapFormat in (4, 5):
                 obj.BitmapPixelData = BitmapData
             else:
-                raise ValueError("unknown BitmapFormat: {}".format(obj.BitmapFormat))
+                raise ValueError("BitmapFormat: {}".format(obj.BitmapFormat))
         finally:
             self._src = _src
 
