@@ -30,6 +30,7 @@ is found.
 
 import collections
 import io
+import warnings
 import zlib
 
 from .helpers import (
@@ -117,6 +118,7 @@ TAG_NAMES = {
 }
 
 LANGCODES = {
+    0: "Sys",
     1: "Latin",
     2: "Japanese",
     3: "Korean",
@@ -333,6 +335,7 @@ class SWFParser:
             try:
                 tag_name = TAG_NAMES[tag_type]
             except KeyError:
+                warnings.warn('unkonwn tag type: {}'.format(tag_type))
                 # malformed SWF, create and unknown object with malformed tag
                 tag_payload = self._src.read(tag_len)
                 _dict = {
@@ -351,6 +354,7 @@ class SWFParser:
                 if self.unknown_alert:
                     raise ValueError("Unknown tag: " + repr(tag_name))
 
+                warnings.warn('tag not supported: {}'.format(tag_name))
                 tag_payload = self._src.read(tag_len)
                 _dict = {'__str__': _repr, '__repr__': _repr, 'name': tag_name}
                 tag = type("UnknownObject", (SWFObject,), _dict)()
@@ -365,7 +369,8 @@ class SWFParser:
                 with ReadQuantityController(self._src, tag_len):
                     tag = tag_meth()
                 assert tag is not None, tag_name
-            except ValueError:
+            except ValueError as e:
+                warnings.warn('processing {} tag: {}'.format(tag_name, e))
                 # an attempt to read too much happened; create a failing
                 # object with the raw payload
                 self._src.guard = None
@@ -379,36 +384,84 @@ class SWFParser:
 
     def _handle_tag_definebits(self):
         """Handle the DefineBits tag."""
+        tag_end = self._src.tell() + self._src.guard
         obj = _make_object("DefineBits")
         obj.CharacterID = unpack_ui16(self._src)
-        assert self._src.read(2) == b'\xFF\xD8'  # SOI marker
-        eoimark1 = eoimark2 = None
-        allbytes = []
-        while not (eoimark1 == b'\xFF' and eoimark2 == b'\xD9'):
-            newbyte = self._src.read(1)
-            allbytes.append(newbyte)
-            eoimark1 = eoimark2
-            eoimark2 = newbyte
-
-        # concatenate everything, removing the end mark
-        obj.JPEGData = b"".join(allbytes)
+        obj.JPEGData = self._get_raw_bytes(-tag_end)
         return obj
 
     def _handle_tag_definebitsjpeg2(self):
         """Handle the DefineBitsJPEG2 tag."""
+        tag_end = self._src.tell() + self._src.guard
         obj = _make_object("DefineBitsJPEG2")
         obj.CharacterID = unpack_ui16(self._src)
-        assert self._src.read(2) == b'\xFF\xD8'  # SOI marker
-        eoimark1 = eoimark2 = None
-        allbytes = []
-        while not (eoimark1 == b'\xFF' and eoimark2 == b'\xD9'):
-            newbyte = self._src.read(1)
-            allbytes.append(newbyte)
-            eoimark1 = eoimark2
-            eoimark2 = newbyte
+        obj.ImageData = self._get_raw_bytes(-tag_end)
+        return obj
 
-        # concatenate everything, removing the end mark
-        obj.ImageData = b"".join(allbytes)
+    def _generic_definebitsjpeg_parser(self, obj, version):
+        """Handle the DefineBitsJPEGN tag."""
+        tag_end = self._src.tell() + self._src.guard
+        obj.CharacterID = unpack_ui16(self._src)
+        obj.AlphaDataOffset = unpack_ui32(self._src)
+        if 4 == version:
+            # FIXME: 8.8 fixed point format in Comment
+            obj.DeblockParam = unpack_ui16(self._src)
+        obj.ImageData = self._get_raw_bytes(obj.AlphaDataOffset)
+        obj.BitmapAlphaData = self._get_raw_bytes(-tag_end, unzip=True)
+
+    def _handle_tag_definebitsjpeg3(self):
+        """Handle the DefineBitsJPEG3 tag."""
+        obj = _make_object("DefineBitsJPEG3")
+        self._generic_definebitsjpeg_parser(obj, 3)
+        return obj
+
+    def _handle_tag_definebitsjpeg4(self):
+        """Handle the DefineBitsJPEG4 tag."""
+        obj = _make_object("DefineBitsJPEG4")
+        self._generic_definebitsjpeg_parser(obj, 4)
+        return obj
+
+    def _generic_definebitslossless_parser(self, obj, version):
+        """Generic parser for the DefineBitsLosslessN tags."""
+        tag_end = self._src.tell() + self._src.guard
+        obj.CharacterID = unpack_ui16(self._src)
+        obj.BitmapFormat = unpack_ui8(self._src)
+        obj.BitmapWidth = unpack_ui16(self._src)
+        obj.BitmapHeight = unpack_ui16(self._src)
+        if 3 == obj.BitmapFormat:
+            obj.BitmapColorTableSize = unpack_ui8(self._src)
+
+        BitmapData = self._get_raw_bytes(-tag_end, unzip=True)
+        _src = self._src
+        try:
+            self._src = io.BytesIO(BitmapData)
+            if 3 == obj.BitmapFormat:
+                if 1 == version:
+                    color = self._get_struct_rgb
+                elif 2 == version:
+                    color = self._get_struct_rgba
+                else:
+                    raise ValueError("unknown version: {}".format(version))
+                obj.ColorTableRGB = [
+                    color() for _ in range(obj.BitmapColorTableSize + 1)]
+                obj.ColormapPixelData = self._get_raw_bytes(-len(BitmapData))
+            elif obj.BitmapFormat in (4, 5):
+                obj.BitmapPixelData = BitmapData
+            else:
+                raise ValueError("BitmapFormat: {}".format(obj.BitmapFormat))
+        finally:
+            self._src = _src
+
+    def _handle_tag_definebitslossless(self):
+        """Handle the DefineBitsLossless tag."""
+        obj = _make_object("DefineBitsLossless")
+        self._generic_definebitslossless_parser(obj, 1)
+        return obj
+
+    def _handle_tag_definebitslossless2(self):
+        """Handle the DefineBitsLossless2 tag."""
+        obj = _make_object("DefineBitsLossless2")
+        self._generic_definebitslossless_parser(obj, 2)
         return obj
 
     def _generic_definetext_parser(self, obj, rgb_struct):
@@ -972,6 +1025,23 @@ class SWFParser:
         obj.Sharpness = unpack_float(self._src)
         obj.Reserved2 = unpack_ui8(self._src)
         return obj
+
+    def _get_raw_bytes(self, size, unzip=False):
+        '''Get raw bytes data, optional uncompress with ZLIB'''
+        pos = self._src.tell()
+        try:
+            # < 0: read until this pos
+            if size < 0:
+                assert abs(size) > pos
+                size = abs(size) - pos
+            data = self._src.read(size)
+            if unzip:
+                return zlib.decompress(data)
+            else:
+                return data
+        except Exception:
+            self._src.seek(pos, io.SEEK_SET)
+            raise
 
     def _get_struct_rect(self):
         """Get the RECT structure."""

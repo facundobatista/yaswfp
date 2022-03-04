@@ -492,7 +492,7 @@ class SanityTestCase(unittest.TestCase):
         t = swf.tags[5]
         self.assertEqual(t.name, 'DefineBits')
         self.assertEqual(_get_attribs(t), {'JPEGData', 'CharacterID'})
-        self.assertEqual(t.JPEGData[:8], b'\xff\xe0\x00\x10JFIF')
+        self.assertEqual(t.JPEGData[:8], b'\xff\xd8\xff\xe0\x00\x10JF')
         self.assertEqual(t.JPEGData[-8:], b'\x19\x08b=\xa8\x03\xff\xd9')
 
         t = swf.tags[9]
